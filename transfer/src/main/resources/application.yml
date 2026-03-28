@@ -1,0 +1,24 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: transfer
+  config:
+    import: optional:configserver:http://localhost:8888
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: transfer
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+            authorization-grant-type: client_credentials
+            scope: accounts.write, notifications.write
+        provider:
+          keycloak:
+            token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
+
+app:
+  accounts-url: http://accounts
+  notifications-url: http://notifications

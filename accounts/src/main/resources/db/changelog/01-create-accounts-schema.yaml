@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 01-create-accounts-table
+      author: my-bank
+      changes:
+        - createTable:
+            schemaName: accounts
+            tableName: accounts
+            columns:
+              - column:
+                  name: login
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: birthdate
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance
+                  type: bigint
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

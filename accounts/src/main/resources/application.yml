@@ -1,0 +1,36 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: accounts
+  config:
+    import: optional:configserver:http://localhost:8888
+  datasource:
+    url: jdbc:postgresql://localhost:5432/my_bank?currentSchema=accounts
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: accounts
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    default-schema: accounts
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: accounts
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+            authorization-grant-type: client_credentials
+            scope: accounts.read, notifications.write
+        provider:
+          keycloak:
+            token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
+
+app:
+  notifications-url: http://notifications

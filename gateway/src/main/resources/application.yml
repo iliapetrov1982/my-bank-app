@@ -1,0 +1,59 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  config:
+    import: optional:configserver:http://localhost:8888
+  cloud:
+    gateway:
+      routes:
+        - id: accounts
+          uri: lb://accounts
+          predicates:
+            - Path=/api/accounts/**
+          filters:
+            - TokenRelay=
+            - name: CircuitBreaker
+              args:
+                name: accounts
+                fallbackUri: forward:/fallback
+
+        - id: cash
+          uri: lb://cash
+          predicates:
+            - Path=/api/cash/**
+          filters:
+            - TokenRelay=
+            - name: CircuitBreaker
+              args:
+                name: cash
+                fallbackUri: forward:/fallback
+
+        - id: transfer
+          uri: lb://transfer
+          predicates:
+            - Path=/api/transfer/**
+          filters:
+            - TokenRelay=
+            - name: CircuitBreaker
+              args:
+                name: transfer
+                fallbackUri: forward:/fallback
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      accounts:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      cash:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      transfer:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s

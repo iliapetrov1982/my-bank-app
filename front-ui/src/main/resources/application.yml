@@ -1,0 +1,23 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: front-ui
+  config:
+    import: optional:configserver:http://localhost:8888
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: front-ui
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+            authorization-grant-type: authorization_code
+            scope: openid, profile, email
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8180/realms/my-bank
+
+app:
+  gateway-url: http://localhost:8080
