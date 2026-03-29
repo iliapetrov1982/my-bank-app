@@ -13,7 +13,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "accounts", schema = "accounts")
+@Table(name = "accounts")
 @Getter
 @Setter
 @Builder

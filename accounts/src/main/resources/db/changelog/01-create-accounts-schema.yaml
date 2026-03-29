@@ -4,7 +4,6 @@ databaseChangeLog:
       author: my-bank
       changes:
         - createTable:
-            schemaName: accounts
             tableName: accounts
             columns:
               - column:

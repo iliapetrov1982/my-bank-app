@@ -7,30 +7,37 @@ spring:
   config:
     import: optional:configserver:http://localhost:8888
   datasource:
-    url: jdbc:postgresql://localhost:5432/my_bank?currentSchema=accounts
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/my_bank}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        default_schema: accounts
+      ddl-auto: none
   liquibase:
+    enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
-    default-schema: accounts
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/my_bank}
+    user: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   security:
     oauth2:
       client:
         registration:
           keycloak:
             client-id: accounts
-            client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:accounts-secret}
             authorization-grant-type: client_credentials
-            scope: accounts.read, notifications.write
+            scope: notifications.write
         provider:
           keycloak:
             token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/certs
 
 app:
-  notifications-url: http://notifications
+  notifications-url: http://localhost:8085
+
+logging:
+  level:
+    liquibase: INFO

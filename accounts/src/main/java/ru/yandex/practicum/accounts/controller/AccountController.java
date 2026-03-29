@@ -34,7 +34,7 @@ public class AccountController {
      */
     @GetMapping("/me")
     public ResponseEntity<AccountResponse> getMyAccount(@AuthenticationPrincipal Jwt jwt) {
-        String login = jwt.getSubject();
+        String login = jwt.getClaimAsString("preferred_username");
         return ResponseEntity.ok(accountService.getAccount(login));
     }
 
@@ -47,7 +47,7 @@ public class AccountController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateAccountRequest request
     ) {
-        String login = jwt.getSubject();
+        String login = jwt.getClaimAsString("preferred_username");
         return ResponseEntity.ok(accountService.updateAccount(login, request));
     }
 
@@ -60,7 +60,7 @@ public class AccountController {
     public ResponseEntity<List<AccountShortResponse>> getOtherAccounts(
             @AuthenticationPrincipal Jwt jwt
     ) {
-        String login = jwt.getSubject();
+        String login = jwt.getClaimAsString("preferred_username");
         return ResponseEntity.ok(accountService.getOtherAccounts(login));
     }
 
