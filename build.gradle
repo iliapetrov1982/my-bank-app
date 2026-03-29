@@ -5,8 +5,7 @@ plugins {
 }
 
 ext {
-    set('springCloudVersion', '2025.0.0')
-    set('resilience4jVersion', '2.3.0')
+    set('springCloudVersion', '2025.1.1')
 }
 
 subprojects {
@@ -37,6 +36,9 @@ subprojects {
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     }
 
     test {
