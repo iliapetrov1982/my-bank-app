@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 02-insert-test-accounts
+      author: my-bank
+      changes:
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: login
+                  value: ivan
+              - column:
+                  name: name
+                  value: Иванов Иван
+              - column:
+                  name: birthdate
+                  value: "1990-01-01"
+              - column:
+                  name: balance
+                  valueNumeric: 1000
+        - insert:
+            tableName: accounts
+            columns:
+              - column:
+                  name: login
+                  value: petrov
+              - column:
+                  name: name
+                  value: Петров Пётр
+              - column:
+                  name: birthdate
+                  value: "1985-06-15"
+              - column:
+                  name: balance
+                  valueNumeric: 500

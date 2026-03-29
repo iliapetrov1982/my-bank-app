@@ -12,12 +12,17 @@ spring:
         registration:
           keycloak:
             client-id: front-ui
-            client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET:front-ui-secret}
             authorization-grant-type: authorization_code
-            scope: openid, profile, email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile, email, accounts.read, accounts.write, cash.write, transfer.write
         provider:
           keycloak:
-            issuer-uri: http://localhost:8180/realms/my-bank
+            authorization-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/auth
+            token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
+            jwk-set-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/certs
+            user-info-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/userinfo
+            user-name-attribute: preferred_username
 
 app:
   gateway-url: http://localhost:8080
