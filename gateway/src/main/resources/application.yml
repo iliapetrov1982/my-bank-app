@@ -6,41 +6,49 @@ spring:
     name: gateway
   config:
     import: optional:configserver:http://localhost:8888
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/certs
   cloud:
     gateway:
-      routes:
-        - id: accounts
-          uri: lb://accounts
-          predicates:
-            - Path=/api/accounts/**
-          filters:
-            - TokenRelay=
-            - name: CircuitBreaker
-              args:
-                name: accounts
-                fallbackUri: forward:/fallback
+      server:
+        webflux:
+          trusted-proxies: ".*"
+          routes:
+            - id: accounts
+              uri: lb://accounts
+              predicates:
+                - Path=/api/accounts/**
+              filters:
+                - TokenRelay=
+                - name: CircuitBreaker
+                  args:
+                    name: accounts
+                    fallbackUri: forward:/fallback
 
-        - id: cash
-          uri: lb://cash
-          predicates:
-            - Path=/api/cash/**
-          filters:
-            - TokenRelay=
-            - name: CircuitBreaker
-              args:
-                name: cash
-                fallbackUri: forward:/fallback
+            - id: cash
+              uri: lb://cash
+              predicates:
+                - Path=/api/cash/**
+              filters:
+                - TokenRelay=
+                - name: CircuitBreaker
+                  args:
+                    name: cash
+                    fallbackUri: forward:/fallback
 
-        - id: transfer
-          uri: lb://transfer
-          predicates:
-            - Path=/api/transfer/**
-          filters:
-            - TokenRelay=
-            - name: CircuitBreaker
-              args:
-                name: transfer
-                fallbackUri: forward:/fallback
+            - id: transfer
+              uri: lb://transfer
+              predicates:
+                - Path=/api/transfer/**
+              filters:
+                - TokenRelay=
+                - name: CircuitBreaker
+                  args:
+                    name: transfer
+                    fallbackUri: forward:/fallback
 
 resilience4j:
   circuitbreaker:
