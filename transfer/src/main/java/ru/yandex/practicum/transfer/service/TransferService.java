@@ -17,10 +17,16 @@ public class TransferService {
     private final NotificationsClient notificationsClient;
 
     public TransferResponse transfer(String fromLogin, TransferRequest request) {
-        accountsClient.withdraw(fromLogin,
-                new BalanceOperationRequest(request.amount()));
-        accountsClient.deposit(request.toLogin(),
-                new BalanceOperationRequest(request.amount()));
+        accountsClient.withdraw(fromLogin, new BalanceOperationRequest(request.amount()));
+        try {
+            accountsClient.deposit(request.toLogin(), new BalanceOperationRequest(request.amount()));
+        } catch (Exception e) {
+            // компенсирующий вызов — возвращаем деньги отправителю
+            accountsClient.deposit(fromLogin, new BalanceOperationRequest(request.amount()));
+            throw new IllegalStateException(
+                    "Перевод не выполнен: ошибка зачисления на счёт %s. Средства возвращены."
+                            .formatted(request.toLogin()), e);
+        }
         notificationsClient.send(new NotificationRequest(
                 "Переведено %d руб. со счёта %s на счёт %s."
                         .formatted(request.amount(), fromLogin, request.toLogin())

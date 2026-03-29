@@ -122,9 +122,10 @@ docker compose up --build -d
 
 ### Тестовые пользователи (Keycloak realm `my-bank`)
 
-| Пользователь | Пароль | Роль  |
-|--------------|--------|-------|
-| user         | user   | USER  |
+| Пользователь | Пароль   | Роль  |
+|--------------|----------|-------|
+| ivan         | password | USER  |
+| petrov       | password | USER  |
 
 ---
 

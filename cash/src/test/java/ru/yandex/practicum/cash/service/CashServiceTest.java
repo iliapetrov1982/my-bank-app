@@ -1,4 +1,4 @@
-package ru.yandex.practicum.cash.servive;
+package ru.yandex.practicum.cash.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +11,6 @@ import ru.yandex.practicum.cash.client.dto.AccountResponse;
 import ru.yandex.practicum.cash.client.dto.BalanceOperationRequest;
 import ru.yandex.practicum.cash.controller.dto.CashRequest;
 import ru.yandex.practicum.cash.controller.dto.CashResponse;
-import ru.yandex.practicum.cash.service.CashService;
 
 import java.time.LocalDate;
 
