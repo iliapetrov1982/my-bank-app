@@ -38,7 +38,7 @@ class NotificationControllerTest {
     @Test
     void notify_validRequest_returns200() throws Exception {
         mockMvc.perform(post("/api/notifications")
-                        .with(jwt())
+                        .with(jwt().jwt(j -> j.claim("scope", "notifications.write")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new NotificationRequest("Тест уведомления"))))
                 .andExpect(status().isOk());
@@ -57,9 +57,18 @@ class NotificationControllerTest {
     @Test
     void notify_blankMessage_returns400() throws Exception {
         mockMvc.perform(post("/api/notifications")
-                        .with(jwt())
+                        .with(jwt().jwt(j -> j.claim("scope", "notifications.write")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new NotificationRequest(""))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void notify_missingScope_returns403() throws Exception {
+        mockMvc.perform(post("/api/notifications")
+                        .with(jwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new NotificationRequest("Тест"))))
+                .andExpect(status().isForbidden());
     }
 }

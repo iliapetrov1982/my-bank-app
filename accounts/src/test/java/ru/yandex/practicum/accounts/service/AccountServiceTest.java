@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -115,10 +116,8 @@ class AccountServiceTest {
         AccountResponse response = accountService.deposit("ivan", new BalanceOperationRequest(200L));
 
         assertThat(response.balance(), equalTo(1200L));
-        verify(notificationsClient).send(any());
+        verifyNoInteractions(notificationsClient);
     }
-
-    // --- withdraw ---
 
     @Test
     void withdraw_sufficientBalance_decreasesBalance() {
@@ -128,7 +127,7 @@ class AccountServiceTest {
         AccountResponse response = accountService.withdraw("ivan", new BalanceOperationRequest(300L));
 
         assertThat(response.balance(), equalTo(700L));
-        verify(notificationsClient).send(any());
+        verifyNoInteractions(notificationsClient);
     }
 
     @Test

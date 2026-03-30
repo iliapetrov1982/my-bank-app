@@ -53,10 +53,6 @@ public class AccountService {
         Account account = findByLogin(login);
         account.setBalance(account.getBalance() + request.amount());
         Account saved = accountRepository.save(account);
-        notificationsClient.send(new NotificationRequest(
-                "Счёт %s пополнен на %d руб. Текущий баланс: %d руб."
-                        .formatted(login, request.amount(), saved.getBalance())
-        ));
         return toAccountResponse(saved);
     }
 
@@ -68,10 +64,6 @@ public class AccountService {
         }
         account.setBalance(account.getBalance() - request.amount());
         Account saved = accountRepository.save(account);
-        notificationsClient.send(new NotificationRequest(
-                "Со счёта %s снято %d руб. Текущий баланс: %d руб."
-                        .formatted(login, request.amount(), saved.getBalance())
-        ));
         return toAccountResponse(saved);
     }
 
