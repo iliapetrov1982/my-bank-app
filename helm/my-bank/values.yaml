@@ -1,0 +1,58 @@
+secrets:
+  postgresUser: postgres
+  postgresPassword: postgres
+  keycloakAdmin: admin
+  keycloakAdminPassword: admin
+  accountsClientSecret: accounts-secret
+  cashClientSecret: cash-secret
+  transferClientSecret: transfer-secret
+  frontUiClientSecret: front-ui-secret
+
+postgres:
+  image:
+    repository: postgres
+    tag: "16-alpine"
+  storage:
+    size: 1Gi
+
+keycloak:
+  image:
+    repository: quay.io/keycloak/keycloak
+    tag: "26.0.0"
+  service:
+    type: NodePort
+    port: 8080
+    nodePort: 30180
+
+accounts:
+  image:
+    repository: my-bank-accounts
+    tag: latest
+
+cash:
+  image:
+    repository: my-bank-cash
+    tag: latest
+
+transfer:
+  image:
+    repository: my-bank-transfer
+    tag: latest
+
+notifications:
+  image:
+    repository: my-bank-notifications
+    tag: latest
+
+gateway:
+  image:
+    repository: my-bank-gateway
+    tag: latest
+
+front-ui:
+  image:
+    repository: my-bank-front-ui
+    tag: latest
+  service:
+    type: NodePort
+    nodePort: 30081
