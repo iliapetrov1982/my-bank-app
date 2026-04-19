@@ -20,3 +20,8 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
     testImplementation 'org.testcontainers:testcontainers-postgresql'
 }
+
+test {
+    environment 'TESTCONTAINERS_RYUK_DISABLED', 'true'
+    environment 'DOCKER_HOST', 'unix:///Users/iliapetrov/.rd/docker.sock'
+}
