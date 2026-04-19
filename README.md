@@ -1,40 +1,52 @@
 # my-bank-app
 
 Учебный проект — банковское приложение на микросервисной архитектуре.  
-Реализован в рамках **Sprint 9** курса Яндекс Практикум (Java-разработчик).
+Реализован в рамках **Sprint 10** курса Яндекс Практикум (Java-разработчик).  
+Развёртывание микросервисов в **Kubernetes** с использованием **Helm-чартов**.
 
 ---
 
 ## Архитектура
 
 ```
-Browser
+Browser (http://localhost:30081)
   └── front-ui :8081  (Spring MVC + Thymeleaf, OAuth2 Authorization Code)
+        │
+        ├── keycloak :8080  (Keycloak 26, realm my-bank, NodePort 30180)
+        │
         └── gateway :8080  (Spring Cloud Gateway WebFlux, OAuth2 Resource Server)
               ├── accounts :8082  (REST, JPA/PostgreSQL, Liquibase)
               ├── cash     :8083  (REST, Feign → accounts, notifications)
               └── transfer :8084  (REST, Feign → accounts, notifications)
                     └── notifications :8085  (REST, OAuth2 Resource Server)
 
-Infrastructure:
-  discovery :8761  (Eureka Server)
-  config    :8888  (Spring Cloud Config Server)
-  keycloak  :8180  (Keycloak 26, realm my-bank)
-  postgres  :5432  (PostgreSQL 16)
+Infrastructure (Kubernetes):
+  PostgreSQL StatefulSet :5432
+  Keycloak Deployment    :8080 (NodePort 30180)
+  ConfigMaps + Secrets   (вместо Eureka + Config Server)
 ```
 
 ### Микросервисы
 
-| Сервис        | Порт | Описание                                                  |
-|---------------|------|-----------------------------------------------------------|
-| discovery     | 8761 | Eureka Server — реестр сервисов                           |
-| config        | 8888 | Config Server — централизованная конфигурация             |
-| gateway       | 8080 | API Gateway с circuit breaker (Resilience4j) и TokenRelay |
-| front-ui      | 8081 | Веб-интерфейс пользователя (Thymeleaf)                    |
-| accounts      | 8082 | Управление счетами, депозит/снятие                        |
-| cash          | 8083 | Кассовые операции (вносит/снимает наличные)               |
-| transfer      | 8084 | Переводы между счетами                                    |
-| notifications | 8085 | Сервис уведомлений                                        |
+| Сервис        | Порт | K8s Service | Описание                                                  |
+|---------------|------|-------------|-----------------------------------------------------------|
+| gateway       | 8080 | ClusterIP   | API Gateway с circuit breaker (Resilience4j) и TokenRelay |
+| front-ui      | 8081 | NodePort 30081 | Веб-интерфейс пользователя (Thymeleaf)                 |
+| accounts      | 8082 | ClusterIP   | Управление счетами, депозит/снятие                        |
+| cash          | 8083 | ClusterIP   | Кассовые операции (вносит/снимает наличные)               |
+| transfer      | 8084 | ClusterIP   | Переводы между счетами                                    |
+| notifications | 8085 | ClusterIP   | Сервис уведомлений                                        |
+| keycloak      | 8080 | NodePort 30180 | OAuth 2.0 сервер авторизации                           |
+| postgres      | 5432 | ClusterIP   | PostgreSQL 16 (StatefulSet)                               |
+
+### Изменения по сравнению со Sprint 9
+
+- **Service Discovery**: Kubernetes DNS (Service) вместо Eureka
+- **Externalized Config**: ConfigMaps + Secrets вместо Spring Cloud Config Server
+- **Gateway маршруты**: прямые HTTP URI вместо `lb://` (Eureka load balancer)
+- **Развёртывание**: Helm-чарты (зонтичный + сабчарты) вместо docker-compose
+- **PostgreSQL**: StatefulSet с PVC вместо Docker volume
+- **Keycloak и Front-UI**: внутри Kubernetes-кластера, доступ через NodePort
 
 ---
 
@@ -46,7 +58,7 @@ Infrastructure:
 - **OpenFeign** — межсервисное взаимодействие с OAuth2 токенами
 - **Spring Cloud Gateway** — WebFlux, circuit breaker, TokenRelay
 - **PostgreSQL 16** + **Liquibase** — хранение данных accounts
-- **Eureka** — service discovery
+- **Kubernetes** + **Helm** — оркестрация и пакетный менеджер
 - **Gradle** (Groovy DSL), многомодульный проект
 
 ---
@@ -55,7 +67,7 @@ Infrastructure:
 
 ```
 Authorization Code Flow:
-  Browser → front-ui → Keycloak → front-ui (получает токен пользователя)
+  Browser → front-ui → Keycloak (NodePort 30180) → front-ui (получает токен пользователя)
   front-ui → gateway (Bearer token) → business services
 
 Client Credentials Flow (сервис-to-сервис):
@@ -71,54 +83,63 @@ Scope-based авторизация: `accounts.read`, `accounts.write`, `cash.wri
 
 ---
 
-## Быстрый старт
+## Быстрый старт (Kubernetes)
 
 ### Требования
 
-- Docker и Docker Compose
+- Kubernetes кластер (Rancher Desktop / Minikube / Kind / Colima)
+- Helm 3+
 - JDK 21
+- Docker
 
-### Сборка и запуск
+### Сборка и развёртывание
 
 ```bash
-# Полная сборка
+# 1. Собрать все JAR-файлы
 ./gradlew clean build -x test
 
-# Запуск всей инфраструктуры
-docker compose up --build -d
-```
+# 2. Собрать Docker-образы (для Minikube — использовать docker-env)
+eval $(minikube docker-env)  # только для Minikube
 
-> **Примечание:** сервисы `discovery`, `config`, `keycloak`, `postgres` поднимаются автоматически и имеют healthcheck.  
-> Бизнес-сервисы (`accounts`, `cash`, `transfer`, `notifications`, `gateway`, `front-ui`) запускаются после того, как инфраструктура станет healthy.
+docker build -t my-bank-accounts:latest ./accounts
+docker build -t my-bank-cash:latest ./cash
+docker build -t my-bank-transfer:latest ./transfer
+docker build -t my-bank-notifications:latest ./notifications
+docker build -t my-bank-gateway:latest ./gateway
+docker build -t my-bank-front-ui:latest ./front-ui
+
+# 3. Развернуть с помощью Helm
+helm install my-bank ./helm/my-bank
+
+# 4. Проверить статус подов
+kubectl get pods -w
+
+# 5. Запустить Helm-тесты
+helm test my-bank
+```
 
 ### Пересборка отдельного сервиса
 
 ```bash
-./gradlew :<service>:clean :<service>:build -x test \
-  && docker compose stop <service> \
-  && docker compose rm -f <service> \
-  && docker compose up <service> --build -d
+./gradlew :<service>:clean :<service>:build -x test
+docker build -t my-bank-<service>:latest ./<service>
+kubectl rollout restart deployment/<service>
 ```
 
-Пример для `accounts`:
+### Удаление
+
 ```bash
-./gradlew :accounts:clean :accounts:build -x test \
-  && docker compose stop accounts \
-  && docker compose rm -f accounts \
-  && docker compose up accounts --build -d
+helm uninstall my-bank
 ```
 
 ---
 
-## Доступные URL
+## Доступные URL (Kubernetes)
 
 | Сервис        | URL                                 |
 |---------------|-------------------------------------|
-| Веб-интерфейс | http://localhost:8081               |
-| API Gateway   | http://localhost:8080               |
-| Keycloak      | http://localhost:8180               |
-| Eureka        | http://localhost:8761               |
-| Config Server | http://localhost:8888/actuator/health |
+| Веб-интерфейс | http://localhost:30081              |
+| Keycloak      | http://localhost:30180              |
 
 ### Тестовые пользователи (Keycloak realm `my-bank`)
 
@@ -129,16 +150,60 @@ docker compose up --build -d
 
 ---
 
+## Helm-чарты
+
+### Структура
+
+```
+helm/my-bank/                    # зонтичный чарт
+├── Chart.yaml
+├── values.yaml
+├── templates/
+│   ├── secrets.yaml             # общий Secret для всех сервисов
+│   └── tests/                   # Helm-тесты подключения
+│       ├── test-postgres.yaml
+│       ├── test-keycloak.yaml
+│       ├── test-accounts.yaml
+│       ├── test-cash.yaml
+│       ├── test-transfer.yaml
+│       ├── test-notifications.yaml
+│       ├── test-gateway.yaml
+│       └── test-front-ui.yaml
+└── charts/                      # сабчарты
+    ├── postgres/                # StatefulSet + Service
+    ├── keycloak/                # Deployment + NodePort Service + ConfigMap (realm)
+    ├── accounts/                # Deployment + ClusterIP Service + ConfigMap
+    ├── cash/                    # Deployment + ClusterIP Service + ConfigMap
+    ├── transfer/                # Deployment + ClusterIP Service + ConfigMap
+    ├── notifications/           # Deployment + ClusterIP Service + ConfigMap
+    ├── gateway/                 # Deployment + ClusterIP Service + ConfigMap
+    └── front-ui/                # Deployment + NodePort Service + ConfigMap
+```
+
+### Развёртывание отдельного сабчарта
+
+```bash
+helm install accounts ./helm/my-bank/charts/accounts
+```
+
+### Helm-тесты
+
+```bash
+helm test my-bank
+```
+
+Тесты проверяют TCP/HTTP-доступность каждого сервиса внутри кластера.
+
+---
+
 ## Структура проекта
 
 ```
 my-bank-app/
 ├── build.gradle          # корневой — общие зависимости и плагины
 ├── settings.gradle
-├── docker-compose.yaml
-├── discovery/            # Eureka Server
-├── config/               # Config Server
-│   └── src/main/resources/configs/  # конфиги сервисов
+├── docker-compose.yaml   # legacy (Sprint 9)
+├── helm/                 # Helm-чарты (Sprint 10)
 ├── gateway/              # API Gateway (WebFlux)
 ├── front-ui/             # Веб-интерфейс (MVC + Thymeleaf)
 ├── accounts/             # Сервис счетов (JPA + Liquibase)
@@ -185,4 +250,7 @@ my-bank-app/
 
 # Тесты конкретного модуля
 ./gradlew :accounts:test
+
+# Helm-тесты
+helm test my-bank
 ```
