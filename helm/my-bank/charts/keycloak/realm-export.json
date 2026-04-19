@@ -1,0 +1,209 @@
+{
+  "realm": "my-bank",
+  "attributes": {
+    "frontendUrl": "http://localhost:30180"
+  },
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "defaultDefaultClientScopes": ["openid", "profile", "email", "roles", "web-origins"],
+  "clientScopes": [
+    {
+      "name": "openid",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" }
+    },
+    {
+      "name": "profile",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" },
+      "protocolMappers": [
+        {
+          "name": "username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "username",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "given name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "firstName",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "given_name",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "family name",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "lastName",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "family_name",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "email",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "email",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false" }
+    },
+    {
+      "name": "web-origins",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "false" }
+    },
+    {
+      "name": "accounts.read",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" }
+    },
+    {
+      "name": "accounts.write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" }
+    },
+    {
+      "name": "cash.write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" }
+    },
+    {
+      "name": "transfer.write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" }
+    },
+    {
+      "name": "notifications.write",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true" }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "front-ui",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "front-ui-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:30081/*"],
+      "webOrigins": ["http://localhost:30081"],
+      "defaultClientScopes": ["openid", "profile", "email", "roles", "web-origins"],
+      "optionalClientScopes": ["accounts.read", "accounts.write", "cash.write", "transfer.write"]
+    },
+    {
+      "clientId": "accounts",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "accounts-secret",
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": [],
+      "optionalClientScopes": ["notifications.write"]
+    },
+    {
+      "clientId": "cash",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "cash-secret",
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": [],
+      "optionalClientScopes": ["accounts.write", "notifications.write"]
+    },
+    {
+      "clientId": "transfer",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "transfer-secret",
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": [],
+      "optionalClientScopes": ["accounts.write", "notifications.write"]
+    }
+  ],
+  "users": [
+    {
+      "username": "ivan",
+      "enabled": true,
+      "firstName": "Иван",
+      "lastName": "Иванов",
+      "email": "ivan@my-bank.ru",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "petrov",
+      "enabled": true,
+      "firstName": "Пётр",
+      "lastName": "Петров",
+      "email": "petrov@my-bank.ru",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["user"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "user",
+        "description": "Bank client role"
+      }
+    ]
+  }
+}
