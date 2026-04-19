@@ -24,14 +24,12 @@ spec:
             - configMapRef:
                 name: notifications-config
           readinessProbe:
-            httpGet:
-              path: /actuator/health
+            tcpSocket:
               port: {{ .Values.port }}
             initialDelaySeconds: 30
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /actuator/health
+            tcpSocket:
               port: {{ .Values.port }}
             initialDelaySeconds: 60
             periodSeconds: 20

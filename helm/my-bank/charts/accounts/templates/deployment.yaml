@@ -40,14 +40,12 @@ spec:
                   name: {{ .Release.Name }}-secrets
                   key: accounts-client-secret
           readinessProbe:
-            httpGet:
-              path: /actuator/health
+            tcpSocket:
               port: {{ .Values.port }}
             initialDelaySeconds: 40
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /actuator/health
+            tcpSocket:
               port: {{ .Values.port }}
             initialDelaySeconds: 60
             periodSeconds: 20
