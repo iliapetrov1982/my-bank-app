@@ -1,0 +1,11 @@
+image:
+  repository: my-bank-front-ui
+  tag: latest
+  pullPolicy: Never
+
+replicaCount: 1
+port: 8081
+
+service:
+  type: NodePort
+  nodePort: 30081
