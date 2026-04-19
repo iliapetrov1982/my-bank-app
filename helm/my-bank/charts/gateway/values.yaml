@@ -1,0 +1,7 @@
+image:
+  repository: my-bank-gateway
+  tag: latest
+  pullPolicy: Never
+
+replicaCount: 1
+port: 8080
