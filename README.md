@@ -254,3 +254,19 @@ my-bank-app/
 # Helm-тесты
 helm test my-bank
 ```
+
+### Интеграционные тесты и Testcontainers
+
+Модуль `accounts` содержит интеграционные тесты с использованием **Testcontainers** (PostgreSQL).
+Для их запуска необходим работающий Docker.
+
+**Rancher Desktop:** компонент Ryuk (cleanup-контейнер Testcontainers) может не запускаться из-за конфликта с симлинком Docker-сокета. В `accounts/build.gradle` задаются переменные окружения для обхода этой проблемы:
+
+```groovy
+test {
+    environment 'TESTCONTAINERS_RYUK_DISABLED', 'true'
+    environment 'DOCKER_HOST', 'unix:///Users/<username>/.rd/docker.sock'
+}
+```
+
+При использовании **Docker Desktop** или **Colima** эти настройки можно удалить или заменить `DOCKER_HOST` на актуальный путь к сокету.
