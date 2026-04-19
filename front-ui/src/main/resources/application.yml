@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: front-ui
-  config:
-    import: optional:configserver:http://localhost:8888
   security:
     oauth2:
       client:
@@ -18,11 +16,11 @@ spring:
             scope: openid, profile, email, accounts.read, accounts.write, cash.write, transfer.write
         provider:
           keycloak:
-            authorization-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/auth
-            token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
-            jwk-set-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/certs
-            user-info-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/userinfo
+            authorization-uri: ${KEYCLOAK_AUTHORIZATION_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/auth}
+            token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/token}
+            jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/certs}
+            user-info-uri: ${KEYCLOAK_USER_INFO_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/userinfo}
             user-name-attribute: preferred_username
 
 app:
-  gateway-url: http://localhost:8080
+  gateway-url: ${APP_GATEWAY_URL:http://localhost:8080}

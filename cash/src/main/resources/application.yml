@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: cash
-  config:
-    import: optional:configserver:http://localhost:8888
   security:
     oauth2:
       client:
@@ -17,8 +15,11 @@ spring:
             scope: accounts.write, notifications.write
         provider:
           keycloak:
-            token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
+            token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/token}
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/certs}
 
 app:
-  accounts-url: http://accounts
-  notifications-url: http://notifications
+  accounts-url: ${APP_ACCOUNTS_URL:http://localhost:8082}
+  notifications-url: ${APP_NOTIFICATIONS_URL:http://localhost:8085}

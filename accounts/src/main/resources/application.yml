@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: accounts
-  config:
-    import: optional:configserver:http://localhost:8888
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/my_bank}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -30,13 +28,13 @@ spring:
             scope: notifications.write
         provider:
           keycloak:
-            token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
+            token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/token}
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/certs
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/certs}
 
 app:
-  notifications-url: http://localhost:8085
+  notifications-url: ${APP_NOTIFICATIONS_URL:http://localhost:8085}
 
 logging:
   level:
