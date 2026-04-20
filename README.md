@@ -196,6 +196,36 @@ helm test my-bank
 
 ---
 
+## CI/CD (Jenkins)
+
+В корне проекта находится `Jenkinsfile` с декларативным пайплайном:
+
+| Stage               | Описание                                                    |
+|---------------------|-------------------------------------------------------------|
+| Checkout            | Клонирование репозитория                                    |
+| Build               | `./gradlew clean build -x test`                             |
+| Test                | `./gradlew test` + публикация JUnit-отчётов                |
+| Docker Build & Push | Параллельная сборка и пуш образов для всех 6 сервисов      |
+| Helm Lint           | Проверка Helm-чарта (`helm lint`)                           |
+| Deploy              | `helm upgrade --install` с тегом `BUILD_NUMBER`             |
+| Helm Test           | Запуск Helm-тестов для проверки доступности сервисов        |
+
+### Требования к Jenkins-агенту
+
+- JDK 21
+- Docker
+- Helm 3+
+- kubectl с доступом к целевому кластеру
+
+### Необходимые Credentials в Jenkins
+
+| ID                          | Тип          | Описание                          |
+|-----------------------------|--------------|-----------------------------------|
+| docker-registry-url         | Secret text  | Адрес Docker-реестра              |
+| docker-registry-credentials | Username/Password | Логин/пароль для Docker-реестра |
+
+---
+
 ## Структура проекта
 
 ```
