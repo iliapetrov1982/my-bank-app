@@ -5,4 +5,4 @@ metadata:
   labels:
     {{- include "notifications.labels" . | nindent 4 }}
 data:
-  KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/certs"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
