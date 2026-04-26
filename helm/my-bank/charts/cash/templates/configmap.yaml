@@ -8,4 +8,4 @@ data:
   KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/certs"
   KEYCLOAK_TOKEN_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/token"
   APP_ACCOUNTS_URL: "http://accounts:8082"
-  APP_NOTIFICATIONS_URL: "http://notifications:8085"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"

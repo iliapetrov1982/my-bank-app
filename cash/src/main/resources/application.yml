@@ -12,14 +12,18 @@ spring:
             client-id: cash
             client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
             authorization-grant-type: client_credentials
-            scope: accounts.write, notifications.write
+            scope: accounts.write
         provider:
           keycloak:
             token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/token}
       resourceserver:
         jwt:
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/certs}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 app:
   accounts-url: ${APP_ACCOUNTS_URL:http://localhost:8082}
-  notifications-url: ${APP_NOTIFICATIONS_URL:http://localhost:8085}
