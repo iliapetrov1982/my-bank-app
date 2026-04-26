@@ -6,7 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.yandex.practicum.accounts.client.NotificationsClient;
+import ru.yandex.practicum.accounts.kafka.NotificationKafkaProducer;
 import ru.yandex.practicum.accounts.controller.dto.AccountResponse;
 import ru.yandex.practicum.accounts.controller.dto.BalanceOperationRequest;
 import ru.yandex.practicum.accounts.controller.dto.UpdateAccountRequest;
@@ -35,7 +35,7 @@ class AccountServiceTest {
     private AccountRepository accountRepository;
 
     @Mock
-    private NotificationsClient notificationsClient;
+    private NotificationKafkaProducer notificationProducer;
 
     @InjectMocks
     private AccountService accountService;
@@ -91,7 +91,7 @@ class AccountServiceTest {
         AccountResponse response = accountService.updateAccount("ivan", request);
 
         assertThat(response.login(), equalTo("ivan"));
-        verify(notificationsClient).send(any());
+        verify(notificationProducer).send(any());
     }
 
     // --- getOtherAccounts ---
@@ -116,7 +116,7 @@ class AccountServiceTest {
         AccountResponse response = accountService.deposit("ivan", new BalanceOperationRequest(200L));
 
         assertThat(response.balance(), equalTo(1200L));
-        verifyNoInteractions(notificationsClient);
+        verifyNoInteractions(notificationProducer);
     }
 
     @Test
@@ -127,7 +127,7 @@ class AccountServiceTest {
         AccountResponse response = accountService.withdraw("ivan", new BalanceOperationRequest(300L));
 
         assertThat(response.balance(), equalTo(700L));
-        verifyNoInteractions(notificationsClient);
+        verifyNoInteractions(notificationProducer);
     }
 
     @Test
@@ -138,6 +138,6 @@ class AccountServiceTest {
                 () -> accountService.withdraw("ivan", new BalanceOperationRequest(9999L)));
 
         verify(accountRepository, never()).save(any());
-        verify(notificationsClient, never()).send(any());
+        verify(notificationProducer, never()).send(any());
     }
 }

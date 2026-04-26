@@ -9,7 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import ru.yandex.practicum.accounts.client.NotificationsClient;
+import ru.yandex.practicum.accounts.kafka.NotificationKafkaProducer;
 import ru.yandex.practicum.accounts.controller.dto.BalanceOperationRequest;
 import ru.yandex.practicum.accounts.controller.dto.UpdateAccountRequest;
 import ru.yandex.practicum.accounts.dao.AccountRepository;
@@ -39,7 +39,7 @@ class AccountServiceIntegrationTest {
     private AccountRepository accountRepository;
 
     @MockitoBean
-    private NotificationsClient notificationsClient;
+    private NotificationKafkaProducer notificationProducer;
 
     @BeforeEach
     void setUp() {
