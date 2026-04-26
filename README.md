@@ -1,8 +1,9 @@
 # my-bank-app
 
 Учебный проект — банковское приложение на микросервисной архитектуре.  
-Реализован в рамках **Sprint 10** курса Яндекс Практикум (Java-разработчик).  
-Развёртывание микросервисов в **Kubernetes** с использованием **Helm-чартов**.
+Реализован в рамках **Sprint 11** курса Яндекс Практикум (Java-разработчик).  
+Развёртывание микросервисов в **Kubernetes** с использованием **Helm-чартов**.  
+Взаимодействие с сервисом уведомлений через **Apache Kafka**.
 
 ---
 
@@ -16,13 +17,17 @@ Browser (http://localhost:30081)
         │
         └── gateway :8080  (Spring Cloud Gateway WebFlux, OAuth2 Resource Server)
               ├── accounts :8082  (REST, JPA/PostgreSQL, Liquibase)
-              ├── cash     :8083  (REST, Feign → accounts, notifications)
-              └── transfer :8084  (REST, Feign → accounts, notifications)
-                    └── notifications :8085  (REST, OAuth2 Resource Server)
+              ├── cash     :8083  (REST, Feign → accounts)
+              └── transfer :8084  (REST, Feign → accounts)
+
+              accounts ──┐
+              cash     ──┼── Kafka (топик: notifications) ──► notifications :8085
+              transfer ──┘
 
 Infrastructure (Kubernetes):
   PostgreSQL StatefulSet :5432
-  Keycloak Deployment    :8080 (NodePort 30180)
+  Kafka StatefulSet      :9092  (KRaft mode, single node, PVC)
+  Keycloak Deployment    :8080  (NodePort 30180)
   ConfigMaps + Secrets   (вместо Eureka + Config Server)
 ```
 
@@ -35,31 +40,61 @@ Infrastructure (Kubernetes):
 | accounts      | 8082 | ClusterIP   | Управление счетами, депозит/снятие                        |
 | cash          | 8083 | ClusterIP   | Кассовые операции (вносит/снимает наличные)               |
 | transfer      | 8084 | ClusterIP   | Переводы между счетами                                    |
-| notifications | 8085 | ClusterIP   | Сервис уведомлений                                        |
+| notifications | 8085 | ClusterIP   | Сервис уведомлений (Kafka consumer)                       |
+| kafka         | 9092 | ClusterIP   | Apache Kafka (KRaft, single node, StatefulSet)            |
 | keycloak      | 8080 | NodePort 30180 | OAuth 2.0 сервер авторизации                           |
 | postgres      | 5432 | ClusterIP   | PostgreSQL 16 (StatefulSet)                               |
 
-### Изменения по сравнению со Sprint 9
+### Изменения по сравнению со Sprint 10
 
-- **Service Discovery**: Kubernetes DNS (Service) вместо Eureka
-- **Externalized Config**: ConfigMaps + Secrets вместо Spring Cloud Config Server
-- **Gateway маршруты**: прямые HTTP URI вместо `lb://` (Eureka load balancer)
-- **Развёртывание**: Helm-чарты (зонтичный + сабчарты) вместо docker-compose
-- **PostgreSQL**: StatefulSet с PVC вместо Docker volume
-- **Keycloak и Front-UI**: внутри Kubernetes-кластера, доступ через NodePort
+- **Apache Kafka**: добавлена распределённая платформа для асинхронного обмена сообщениями
+- **Notifications**: REST API заменён на Kafka consumer (`@KafkaListener`)
+- **Accounts, Cash, Transfer**: Feign-клиент к Notifications заменён на Kafka producer (`KafkaTemplate`)
+- **OAuth2 Client Credentials**: удалены из accounts (больше не нужен для вызова notifications); из cash/transfer убран scope `notifications.write`
+- **Kafka Helm-сабчарт**: StatefulSet с PVC для персистентности данных топиков
+- **Топик `notifications`**: single partition, replication factor 1, at-least-once delivery
 
 ---
 
 ## Технологии
 
 - **Java 21**, **Spring Boot 4.0.4**, **Spring Cloud 2025.1.1**
+- **Apache Kafka 3.9.0** (KRaft mode) + **Spring Kafka 4.0.4**
 - **Spring Security** — OAuth2 Authorization Code (front-ui) + Client Credentials (сервис-to-сервис)
 - **Keycloak 26** — Identity Provider, realm `my-bank`
-- **OpenFeign** — межсервисное взаимодействие с OAuth2 токенами
+- **OpenFeign** — межсервисное взаимодействие accounts ← cash/transfer (с OAuth2 токенами)
 - **Spring Cloud Gateway** — WebFlux, circuit breaker, TokenRelay
 - **PostgreSQL 16** + **Liquibase** — хранение данных accounts
 - **Kubernetes** + **Helm** — оркестрация и пакетный менеджер
 - **Gradle** (Groovy DSL), многомодульный проект
+
+---
+
+## Apache Kafka
+
+### Конфигурация
+
+- **Режим**: KRaft (без ZooKeeper), single node
+- **Топик**: `notifications` (1 partition, 1 replica)
+- **Сериализация**: JSON (`JsonSerializer` / `JsonDeserializer`)
+- **Семантика доставки**: at-least-once (Spring Kafka AckMode.BATCH, auto.commit=false)
+- **Порядок сообщений**: не гарантируется (unordered)
+- **Персистентность**: PersistentVolumeClaim — данные топиков сохраняются при перезапуске подов
+- **Consumer group**: `notifications-group` — при рестарте notifications продолжает с последнего коммита offset
+
+### Продюсеры
+
+Сервисы **accounts**, **cash** и **transfer** публикуют JSON-сообщения в топик `notifications`:
+
+```json
+{
+  "message": "Счёт ivan пополнен на 100 руб. Текущий баланс: 1100 руб."
+}
+```
+
+### Консьюмер
+
+Сервис **notifications** читает сообщения через `@KafkaListener` и логирует их.
 
 ---
 
@@ -71,15 +106,15 @@ Authorization Code Flow:
   front-ui → gateway (Bearer token) → business services
 
 Client Credentials Flow (сервис-to-сервис):
-  accounts → notifications  (scope: notifications.write)
-  cash     → accounts       (scope: accounts.write)
-  cash     → notifications  (scope: notifications.write)
-  transfer → accounts       (scope: accounts.write)
-  transfer → notifications  (scope: notifications.write)
+  cash     → accounts  (scope: accounts.write)
+  transfer → accounts  (scope: accounts.write)
+
+Kafka (без OAuth2):
+  accounts, cash, transfer → Kafka → notifications
 ```
 
 Каждый бизнес-сервис защищён как **Resource Server** (JWT / jwk-set-uri).  
-Scope-based авторизация: `accounts.read`, `accounts.write`, `cash.write`, `transfer.write`, `notifications.write`.
+Scope-based авторизация: `accounts.read`, `accounts.write`, `cash.write`, `transfer.write`.
 
 ---
 
@@ -162,6 +197,7 @@ helm/my-bank/                    # зонтичный чарт
 │   ├── secrets.yaml             # общий Secret для всех сервисов
 │   └── tests/                   # Helm-тесты подключения
 │       ├── test-postgres.yaml
+│       ├── test-kafka.yaml
 │       ├── test-keycloak.yaml
 │       ├── test-accounts.yaml
 │       ├── test-cash.yaml
@@ -171,6 +207,7 @@ helm/my-bank/                    # зонтичный чарт
 │       └── test-front-ui.yaml
 └── charts/                      # сабчарты
     ├── postgres/                # StatefulSet + Service
+    ├── kafka/                   # StatefulSet + Service (KRaft, PVC)
     ├── keycloak/                # Deployment + NodePort Service + ConfigMap (realm)
     ├── accounts/                # Deployment + ClusterIP Service + ConfigMap
     ├── cash/                    # Deployment + ClusterIP Service + ConfigMap
@@ -180,19 +217,13 @@ helm/my-bank/                    # зонтичный чарт
     └── front-ui/                # Deployment + NodePort Service + ConfigMap
 ```
 
-### Развёртывание отдельного сабчарта
-
-```bash
-helm install accounts ./helm/my-bank/charts/accounts
-```
-
 ### Helm-тесты
 
 ```bash
 helm test my-bank
 ```
 
-Тесты проверяют TCP/HTTP-доступность каждого сервиса внутри кластера.
+Тесты проверяют TCP-доступность каждого сервиса внутри кластера.
 
 ---
 
@@ -232,14 +263,13 @@ helm test my-bank
 my-bank-app/
 ├── build.gradle          # корневой — общие зависимости и плагины
 ├── settings.gradle
-├── docker-compose.yaml   # legacy (Sprint 9)
-├── helm/                 # Helm-чарты (Sprint 10)
+├── helm/                 # Helm-чарты
 ├── gateway/              # API Gateway (WebFlux)
 ├── front-ui/             # Веб-интерфейс (MVC + Thymeleaf)
-├── accounts/             # Сервис счетов (JPA + Liquibase)
-├── cash/                 # Кассовый сервис
-├── transfer/             # Сервис переводов
-├── notifications/        # Сервис уведомлений
+├── accounts/             # Сервис счетов (JPA + Liquibase + Kafka producer)
+├── cash/                 # Кассовый сервис (Feign + Kafka producer)
+├── transfer/             # Сервис переводов (Feign + Kafka producer)
+├── notifications/        # Сервис уведомлений (Kafka consumer)
 ├── keycloak/             # Realm export для автоимпорта
 └── postgres/             # init.sql для инициализации БД
 ```
@@ -285,7 +315,19 @@ my-bank-app/
 helm test my-bank
 ```
 
-### Интеграционные тесты и Testcontainers
+### Unit-тесты
+
+- **AccountServiceTest** — CRUD-операции, проверка отправки уведомлений в Kafka
+- **CashServiceTest** — deposit/withdraw с проверкой вызова Kafka producer
+- **TransferServiceTest** — перевод с saga-компенсацией и Kafka producer
+- **AccountControllerTest, CashControllerTest, TransferControllerTest** — JWT-авторизация, валидация
+
+### Интеграционные тесты
+
+- **AccountServiceIntegrationTest** — Testcontainers (PostgreSQL), полный цикл операций
+- **NotificationKafkaListenerTest** — EmbeddedKafka, проверка получения и обработки сообщений
+
+### Testcontainers (Rancher Desktop)
 
 Модуль `accounts` содержит интеграционные тесты с использованием **Testcontainers** (PostgreSQL).
 Для их запуска необходим работающий Docker.
