@@ -28,11 +28,11 @@ spec:
             - name: KAFKA_PROCESS_ROLES
               value: "broker,controller"
             - name: KAFKA_LISTENERS
-              value: "PLAINTEXT://0.0.0.0:{{ .Values.port }},CONTROLLER://0.0.0.0:{{ .Values.controllerPort }}"
+              value: "PLAINTEXT://:{{ .Values.port }},CONTROLLER://:{{ .Values.controllerPort }}"
             - name: KAFKA_ADVERTISED_LISTENERS
               value: "PLAINTEXT://kafka:{{ .Values.port }}"
             - name: KAFKA_CONTROLLER_QUORUM_VOTERS
-              value: "1@kafka:{{ .Values.controllerPort }}"
+              value: "1@localhost:{{ .Values.controllerPort }}"
             - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
               value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
             - name: KAFKA_CONTROLLER_LISTENER_NAMES
