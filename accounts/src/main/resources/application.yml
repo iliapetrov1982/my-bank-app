@@ -19,22 +19,14 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   security:
     oauth2:
-      client:
-        registration:
-          keycloak:
-            client-id: accounts
-            client-secret: ${KEYCLOAK_CLIENT_SECRET:accounts-secret}
-            authorization-grant-type: client_credentials
-            scope: notifications.write
-        provider:
-          keycloak:
-            token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/token}
       resourceserver:
         jwt:
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/certs}
-
-app:
-  notifications-url: ${APP_NOTIFICATIONS_URL:http://localhost:8085}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 logging:
   level:

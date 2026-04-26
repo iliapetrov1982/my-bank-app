@@ -7,5 +7,4 @@ metadata:
 data:
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/my_bank"
   KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/certs"
-  KEYCLOAK_TOKEN_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/token"
-  APP_NOTIFICATIONS_URL: "http://notifications:8085"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
