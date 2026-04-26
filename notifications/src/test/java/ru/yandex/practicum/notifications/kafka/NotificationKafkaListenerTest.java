@@ -11,7 +11,6 @@ import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.kafka.test.utils.ContainerTestUtils;
@@ -38,23 +37,23 @@ class NotificationKafkaListenerTest {
     static class KafkaProducerTestConfig {
 
         @Bean
-        public ProducerFactory<String, NotificationEvent> producerFactory(EmbeddedKafkaBroker broker) {
+        public ProducerFactory<String, String> producerFactory(EmbeddedKafkaBroker broker) {
             return new DefaultKafkaProducerFactory<>(Map.of(
                     ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, broker.getBrokersAsString(),
                     ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-                    ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class
+                    ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
             ));
         }
 
         @Bean
-        public KafkaTemplate<String, NotificationEvent> kafkaTemplate(
-                ProducerFactory<String, NotificationEvent> producerFactory) {
+        public KafkaTemplate<String, String> kafkaTemplate(
+                ProducerFactory<String, String> producerFactory) {
             return new KafkaTemplate<>(producerFactory);
         }
     }
 
     @Autowired
-    private KafkaTemplate<String, NotificationEvent> kafkaTemplate;
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     @Autowired
     private KafkaListenerEndpointRegistry registry;
@@ -70,9 +69,9 @@ class NotificationKafkaListenerTest {
         registry.getListenerContainers()
                 .forEach(c -> ContainerTestUtils.waitForAssignment(c, embeddedKafka.getPartitionsPerTopic()));
 
-        NotificationEvent event = new NotificationEvent("Тестовое уведомление");
+        String json = "{\"message\":\"Тестовое уведомление\"}";
 
-        kafkaTemplate.send("notifications", event).get(10, TimeUnit.SECONDS);
+        kafkaTemplate.send("notifications", json).get(10, TimeUnit.SECONDS);
 
         verify(notificationService, timeout(10000))
                 .notify(argThat(e -> e.message().equals("Тестовое уведомление")));
