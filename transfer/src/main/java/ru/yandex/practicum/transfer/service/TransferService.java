@@ -3,9 +3,9 @@ package ru.yandex.practicum.transfer.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.transfer.client.AccountsClient;
-import ru.yandex.practicum.transfer.client.NotificationsClient;
 import ru.yandex.practicum.transfer.client.dto.BalanceOperationRequest;
-import ru.yandex.practicum.transfer.client.dto.NotificationRequest;
+import ru.yandex.practicum.transfer.kafka.NotificationEvent;
+import ru.yandex.practicum.transfer.kafka.NotificationKafkaProducer;
 import ru.yandex.practicum.transfer.controller.dto.TransferRequest;
 import ru.yandex.practicum.transfer.controller.dto.TransferResponse;
 
@@ -14,7 +14,7 @@ import ru.yandex.practicum.transfer.controller.dto.TransferResponse;
 public class TransferService {
 
     private final AccountsClient accountsClient;
-    private final NotificationsClient notificationsClient;
+    private final NotificationKafkaProducer notificationProducer;
 
     public TransferResponse transfer(String fromLogin, TransferRequest request) {
         accountsClient.withdraw(fromLogin, new BalanceOperationRequest(request.amount()));
@@ -27,7 +27,7 @@ public class TransferService {
                     "Перевод не выполнен: ошибка зачисления на счёт %s. Средства возвращены."
                             .formatted(request.toLogin()), e);
         }
-        notificationsClient.send(new NotificationRequest(
+        notificationProducer.send(new NotificationEvent(
                 "Переведено %d руб. со счёта %s на счёт %s."
                         .formatted(request.amount(), fromLogin, request.toLogin())
         ));
