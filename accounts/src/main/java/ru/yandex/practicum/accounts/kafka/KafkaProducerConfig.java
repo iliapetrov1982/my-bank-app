@@ -19,6 +19,9 @@ public class KafkaProducerConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${app.kafka.notifications-topic}")
+    private String notificationsTopic;
+
     @Bean
     public ProducerFactory<String, NotificationEvent> producerFactory() {
         return new DefaultKafkaProducerFactory<>(Map.of(
@@ -36,7 +39,7 @@ public class KafkaProducerConfig {
 
     @Bean
     public NewTopic notificationsTopic() {
-        return TopicBuilder.name("notifications")
+        return TopicBuilder.name(notificationsTopic)
                 .partitions(1)
                 .replicas(1)
                 .build();

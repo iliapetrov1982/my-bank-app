@@ -23,9 +23,12 @@ public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${app.kafka.notifications-topic}")
+    private String topicName;
+
     @Bean
     public NewTopic notificationsTopic() {
-        return TopicBuilder.name("notifications")
+        return TopicBuilder.name(topicName)
                 .partitions(1)
                 .replicas(1)
                 .build();
