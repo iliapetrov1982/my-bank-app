@@ -23,5 +23,8 @@ dependencies {
 
 test {
     environment 'TESTCONTAINERS_RYUK_DISABLED', 'true'
-    environment 'DOCKER_HOST', 'unix:///Users/iliapetrov/.rd/docker.sock'
+    def rdSocket = file("${System.getProperty('user.home')}/.rd/docker.sock")
+    if (System.getenv('DOCKER_HOST') == null && rdSocket.exists()) {
+        environment 'DOCKER_HOST', "unix://${rdSocket.absolutePath}"
+    }
 }
