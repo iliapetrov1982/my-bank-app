@@ -6,7 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.yandex.practicum.cash.client.AccountsClient;
-import ru.yandex.practicum.cash.client.NotificationsClient;
+import ru.yandex.practicum.cash.kafka.NotificationKafkaProducer;
 import ru.yandex.practicum.cash.client.dto.AccountResponse;
 import ru.yandex.practicum.cash.client.dto.BalanceOperationRequest;
 import ru.yandex.practicum.cash.controller.dto.CashRequest;
@@ -28,7 +28,7 @@ class CashServiceTest {
     private AccountsClient accountsClient;
 
     @Mock
-    private NotificationsClient notificationsClient;
+    private NotificationKafkaProducer notificationProducer;
 
     @InjectMocks
     private CashService cashService;
@@ -46,7 +46,7 @@ class CashServiceTest {
         assertThat(response.login(), equalTo("ivan"));
         assertThat(response.balance(), equalTo(1200L));
         verify(accountsClient).deposit(eq("ivan"), eq(new BalanceOperationRequest(200L)));
-        verify(notificationsClient).send(any());
+        verify(notificationProducer).send(any());
     }
 
     @Test
@@ -61,6 +61,6 @@ class CashServiceTest {
         assertThat(response.login(), equalTo("ivan"));
         assertThat(response.balance(), equalTo(800L));
         verify(accountsClient).withdraw(eq("ivan"), eq(new BalanceOperationRequest(200L)));
-        verify(notificationsClient).send(any());
+        verify(notificationProducer).send(any());
     }
 }

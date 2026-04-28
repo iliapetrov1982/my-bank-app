@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transfer-config
+  labels:
+    {{- include "transfer.labels" . | nindent 4 }}
+data:
+  KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/certs"
+  KEYCLOAK_TOKEN_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/token"
+  APP_ACCOUNTS_URL: "http://accounts:8082"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"

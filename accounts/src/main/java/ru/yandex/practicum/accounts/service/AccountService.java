@@ -3,8 +3,8 @@ package ru.yandex.practicum.accounts.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.yandex.practicum.accounts.client.NotificationsClient;
-import ru.yandex.practicum.accounts.client.dto.NotificationRequest;
+import ru.yandex.practicum.accounts.kafka.NotificationEvent;
+import ru.yandex.practicum.accounts.kafka.NotificationKafkaProducer;
 import ru.yandex.practicum.accounts.controller.dto.AccountResponse;
 import ru.yandex.practicum.accounts.controller.dto.AccountShortResponse;
 import ru.yandex.practicum.accounts.controller.dto.BalanceOperationRequest;
@@ -20,7 +20,7 @@ import java.util.NoSuchElementException;
 public class AccountService {
 
     private final AccountRepository accountRepository;
-    private final NotificationsClient notificationsClient;
+    private final NotificationKafkaProducer notificationProducer;
 
     @Transactional(readOnly = true)
     public AccountResponse getAccount(String login) {
@@ -34,7 +34,7 @@ public class AccountService {
         account.setName(request.name());
         account.setBirthdate(request.birthdate());
         Account saved = accountRepository.save(account);
-        notificationsClient.send(new NotificationRequest(
+        notificationProducer.send(new NotificationEvent(
                 "Аккаунт %s обновлён: имя=%s, дата рождения=%s"
                         .formatted(login, request.name(), request.birthdate())
         ));

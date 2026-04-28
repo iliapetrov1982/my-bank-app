@@ -1,0 +1,7 @@
+image:
+  repository: my-bank-accounts
+  tag: latest
+  pullPolicy: Never
+
+replicaCount: 1
+port: 8082

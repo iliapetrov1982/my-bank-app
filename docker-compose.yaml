@@ -38,7 +38,7 @@ services:
     volumes:
       - ./keycloak:/opt/keycloak/data/import
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/health/ready || exit 1" ]
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -92,7 +92,7 @@ services:
       config:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health || exit 1" ]
+      test: [ "CMD-SHELL", "nc -z localhost 8085" ]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -124,7 +124,7 @@ services:
       notifications:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1" ]
+      test: [ "CMD-SHELL", "nc -z localhost 8082" ]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -152,7 +152,7 @@ services:
       accounts:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1" ]
+      test: [ "CMD-SHELL", "nc -z localhost 8083" ]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -180,7 +180,7 @@ services:
       accounts:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1" ]
+      test: [ "CMD-SHELL", "nc -z localhost 8084" ]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -210,7 +210,7 @@ services:
       notifications:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1" ]
+      test: [ "CMD-SHELL", "nc -z localhost 8080" ]
       interval: 15s
       timeout: 5s
       retries: 10

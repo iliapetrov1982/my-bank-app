@@ -4,8 +4,6 @@ server:
 spring:
   application:
     name: transfer
-  config:
-    import: optional:configserver:http://localhost:8888
   security:
     oauth2:
       client:
@@ -14,11 +12,20 @@ spring:
             client-id: transfer
             client-secret: ${KEYCLOAK_CLIENT_SECRET:secret}
             authorization-grant-type: client_credentials
-            scope: accounts.write, notifications.write
+            scope: accounts.write
         provider:
           keycloak:
-            token-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/token
+            token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/token}
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/certs}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 app:
-  accounts-url: http://accounts
-  notifications-url: http://notifications
+  accounts-url: ${APP_ACCOUNTS_URL:http://localhost:8082}
+  kafka:
+    notifications-topic: ${APP_KAFKA_NOTIFICATIONS_TOPIC:notifications}

@@ -1,0 +1,9 @@
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: "26.0.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 8080
+  nodePort: 30180

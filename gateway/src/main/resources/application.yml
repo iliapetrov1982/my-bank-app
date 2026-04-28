@@ -4,13 +4,11 @@ server:
 spring:
   application:
     name: gateway
-  config:
-    import: optional:configserver:http://localhost:8888
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8180/realms/my-bank/protocol/openid-connect/certs
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/my-bank/protocol/openid-connect/certs}
   cloud:
     gateway:
       server:
@@ -18,7 +16,7 @@ spring:
           trusted-proxies: ".*"
           routes:
             - id: accounts
-              uri: lb://accounts
+              uri: ${ACCOUNTS_URI:http://localhost:8082}
               predicates:
                 - Path=/api/accounts/**
               filters:
@@ -29,7 +27,7 @@ spring:
                     fallbackUri: forward:/fallback
 
             - id: cash
-              uri: lb://cash
+              uri: ${CASH_URI:http://localhost:8083}
               predicates:
                 - Path=/api/cash/**
               filters:
@@ -40,7 +38,7 @@ spring:
                     fallbackUri: forward:/fallback
 
             - id: transfer
-              uri: lb://transfer
+              uri: ${TRANSFER_URI:http://localhost:8084}
               predicates:
                 - Path=/api/transfer/**
               filters:

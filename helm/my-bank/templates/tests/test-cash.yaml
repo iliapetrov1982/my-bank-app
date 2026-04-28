@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-test-cash"
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: test
+      image: busybox
+      command: ['sh', '-c', 'for i in $(seq 1 60); do wget -qO- http://cash:8083/actuator/health --timeout=5 && exit 0; sleep 2; done; exit 1']
+  restartPolicy: Never

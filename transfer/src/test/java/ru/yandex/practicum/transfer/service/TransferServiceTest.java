@@ -6,7 +6,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.yandex.practicum.transfer.client.AccountsClient;
-import ru.yandex.practicum.transfer.client.NotificationsClient;
+import ru.yandex.practicum.transfer.kafka.NotificationKafkaProducer;
 import ru.yandex.practicum.transfer.client.dto.BalanceOperationRequest;
 import ru.yandex.practicum.transfer.controller.dto.TransferRequest;
 import ru.yandex.practicum.transfer.controller.dto.TransferResponse;
@@ -24,7 +24,7 @@ class TransferServiceTest {
     private AccountsClient accountsClient;
 
     @Mock
-    private NotificationsClient notificationsClient;
+    private NotificationKafkaProducer notificationProducer;
 
     @InjectMocks
     private TransferService transferService;
@@ -41,6 +41,6 @@ class TransferServiceTest {
 
         verify(accountsClient).withdraw(eq("ivan"), eq(new BalanceOperationRequest(300L)));
         verify(accountsClient).deposit(eq("petrov"), eq(new BalanceOperationRequest(300L)));
-        verify(notificationsClient).send(any());
+        verify(notificationProducer).send(any());
     }
 }
