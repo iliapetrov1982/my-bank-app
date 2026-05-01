@@ -31,6 +31,15 @@ zipkin:
     port: 9411
     nodePort: 30411
 
+prometheus:
+  image:
+    repository: prom/prometheus
+    tag: "v3.0.1"
+  service:
+    type: NodePort
+    port: 9090
+    nodePort: 30909
+
 keycloak:
   image:
     repository: quay.io/keycloak/keycloak

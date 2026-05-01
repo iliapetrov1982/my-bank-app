@@ -1,0 +1,9 @@
+image:
+  repository: prom/prometheus
+  tag: "v3.0.1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 9090
+  nodePort: 30909

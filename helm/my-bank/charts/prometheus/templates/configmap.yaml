@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  labels:
+    {{- include "prometheus.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - /etc/prometheus/alerts/*.yml
+
+    scrape_configs:
+      - job_name: 'accounts'
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['accounts:8082']
+      - job_name: 'cash'
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['cash:8083']
+      - job_name: 'transfer'
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['transfer:8084']
+      - job_name: 'notifications'
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['notifications:8085']
+      - job_name: 'gateway'
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['gateway:8080']
+      - job_name: 'front-ui'
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ['front-ui:8081']
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  labels:
+    {{- include "prometheus.labels" . | nindent 4 }}
+data:
+  my-bank-alerts.yml: |
+    groups:
+      - name: my-bank-http
+        interval: 30s
+        rules:
+          - alert: HighHttp5xxRate
+            expr: sum by (application) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) > 0.5
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "High 5xx error rate on {{`{{ $labels.application }}`}}"
+              description: "5xx rate is {{`{{ $value }}`}} req/s over the last 5m."
+
+          - alert: HighRequestLatencyP95
+            expr: histogram_quantile(0.95, sum by (application, le) (rate(http_server_requests_seconds_bucket[5m]))) > 1
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "p95 latency over 1s on {{`{{ $labels.application }}`}}"
+              description: "p95 latency is {{`{{ $value }}`}}s."
+
+      - name: my-bank-jvm
+        interval: 30s
+        rules:
+          - alert: HighJvmHeapUsage
+            expr: sum by (application) (jvm_memory_used_bytes{area="heap"}) / sum by (application) (jvm_memory_max_bytes{area="heap"}) > 0.85
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "JVM heap > 85% on {{`{{ $labels.application }}`}}"
+              description: "Heap usage is {{`{{ $value | humanizePercentage }}`}}."
+
+      - name: my-bank-business
+        interval: 30s
+        rules:
+          - alert: ManyFailedCashWithdrawals
+            expr: sum by (login) (rate(cash_withdraw_failed_total[5m])) > 0.1
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High failed cash withdraw rate for {{`{{ $labels.login }}`}}"
+              description: "{{`{{ $value }}`}} failed withdrawals/sec over 5m."
+
+          - alert: ManyFailedTransfers
+            expr: sum by (from_login) (rate(transfer_failed_total[5m])) > 0.1
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High failed transfer rate from {{`{{ $labels.from_login }}`}}"
+              description: "{{`{{ $value }}`}} failed transfers/sec over 5m."
+
+          - alert: NotificationDeliveryFailures
+            expr: sum(rate(notification_send_failed_total[5m])) > 0.1
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Notification service failing to send"
+              description: "{{`{{ $value }}`}} notification failures/sec over 5m."
