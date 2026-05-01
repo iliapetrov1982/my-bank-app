@@ -10,3 +10,4 @@ data:
   KEYCLOAK_TOKEN_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/token"
   KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/certs"
   KEYCLOAK_USER_INFO_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/userinfo"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin:9411/api/v2/spans"

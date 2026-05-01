@@ -8,3 +8,4 @@ data:
   SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/my_bank"
   KEYCLOAK_JWK_SET_URI: "http://keycloak:8080/realms/my-bank/protocol/openid-connect/certs"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin:9411/api/v2/spans"
