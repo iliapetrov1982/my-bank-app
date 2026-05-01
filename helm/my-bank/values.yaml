@@ -22,6 +22,15 @@ kafka:
   storage:
     size: 1Gi
 
+zipkin:
+  image:
+    repository: openzipkin/zipkin
+    tag: "3"
+  service:
+    type: NodePort
+    port: 9411
+    nodePort: 30411
+
 keycloak:
   image:
     repository: quay.io/keycloak/keycloak

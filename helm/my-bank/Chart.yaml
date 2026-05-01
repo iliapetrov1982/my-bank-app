@@ -12,6 +12,8 @@ dependencies:
     version: 0.1.0
   - name: kafka
     version: 0.1.0
+  - name: zipkin
+    version: 0.1.0
   - name: notifications
     version: 0.1.0
   - name: accounts
