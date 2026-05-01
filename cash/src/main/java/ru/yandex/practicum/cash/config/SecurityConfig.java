@@ -19,6 +19,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/cash/**").hasAuthority("SCOPE_cash.write")
                         .anyRequest().authenticated()
                 )

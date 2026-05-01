@@ -20,6 +20,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/**").permitAll()
                         // Эндпоинты для пользователя (User JWT — Authorization Code Flow)
                         .requestMatchers(HttpMethod.GET, "/api/accounts/me").hasAuthority("SCOPE_accounts.read")
                         .requestMatchers(HttpMethod.PUT, "/api/accounts/me").hasAuthority("SCOPE_accounts.write")
