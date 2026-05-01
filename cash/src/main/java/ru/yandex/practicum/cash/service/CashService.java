@@ -1,5 +1,6 @@
 package ru.yandex.practicum.cash.service;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.cash.client.AccountsClient;
@@ -16,6 +17,7 @@ public class CashService {
 
     private final AccountsClient accountsClient;
     private final NotificationKafkaProducer notificationProducer;
+    private final MeterRegistry meterRegistry;
 
     public CashResponse deposit(String login, CashRequest request) {
         AccountResponse account = accountsClient.deposit(login,
@@ -29,13 +31,18 @@ public class CashService {
     }
 
     public CashResponse withdraw(String login, CashRequest request) {
-        AccountResponse account = accountsClient.withdraw(login,
-                new BalanceOperationRequest(request.amount()));
-        notificationProducer.send(new NotificationEvent(
-                login,
-                "Со счёта %s снято %d руб. Текущий баланс: %d руб."
-                        .formatted(login, request.amount(), account.balance())
-        ));
-        return new CashResponse(account.login(), account.balance());
+        try {
+            AccountResponse account = accountsClient.withdraw(login,
+                    new BalanceOperationRequest(request.amount()));
+            notificationProducer.send(new NotificationEvent(
+                    login,
+                    "Со счёта %s снято %d руб. Текущий баланс: %d руб."
+                            .formatted(login, request.amount(), account.balance())
+            ));
+            return new CashResponse(account.login(), account.balance());
+        } catch (RuntimeException e) {
+            meterRegistry.counter("cash.withdraw.failed", "login", login).increment();
+            throw e;
+        }
     }
 }
