@@ -334,7 +334,13 @@ helm/my-bank/                    # зонтичный чарт
 │       ├── test-transfer.yaml
 │       ├── test-notifications.yaml
 │       ├── test-gateway.yaml
-│       └── test-front-ui.yaml
+│       ├── test-front-ui.yaml
+│       ├── test-zipkin.yaml
+│       ├── test-prometheus.yaml
+│       ├── test-grafana.yaml
+│       ├── test-elasticsearch.yaml
+│       ├── test-logstash.yaml
+│       └── test-kibana.yaml
 └── charts/                      # сабчарты
     ├── postgres/                # StatefulSet + Service
     ├── kafka/                   # StatefulSet + Service (KRaft, PVC)
