@@ -1,5 +1,6 @@
 package ru.yandex.practicum.frontui.config;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,9 +13,10 @@ public class RestClientConfig {
     private String gatewayUrl;
 
     @Bean
-    public RestClient restClient() {
+    public RestClient restClient(ObservationRegistry observationRegistry) {
         return RestClient.builder()
                 .baseUrl(gatewayUrl)
+                .observationRegistry(observationRegistry)
                 .build();
     }
 }
