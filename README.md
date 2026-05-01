@@ -1,9 +1,10 @@
 # my-bank-app
 
 Учебный проект — банковское приложение на микросервисной архитектуре.  
-Реализован в рамках **Sprint 11** курса Яндекс Практикум (Java-разработчик).  
+Реализован в рамках **Sprint 12** курса Яндекс Практикум (Java-разработчик).  
 Развёртывание микросервисов в **Kubernetes** с использованием **Helm-чартов**.  
-Взаимодействие с сервисом уведомлений через **Apache Kafka**.
+Взаимодействие с сервисом уведомлений через **Apache Kafka**.  
+Распределённая трассировка (**Zipkin**), метрики (**Prometheus + Grafana**) и логирование (**ELK**).
 
 ---
 
@@ -29,6 +30,14 @@ Infrastructure (Kubernetes):
   Kafka StatefulSet      :9092  (KRaft mode, single node, PVC)
   Keycloak Deployment    :8080  (NodePort 30180)
   ConfigMaps + Secrets   (вместо Eureka + Config Server)
+
+Observability stack (Kubernetes, in-memory):
+  Zipkin        :9411  (NodePort 30411) — распределённая трассировка
+  Prometheus    :9090  (NodePort 30909) — сбор метрик и алерты
+  Grafana       :3000  (NodePort 30300) — дашборды графиков
+  Elasticsearch :9200  (ClusterIP)      — хранилище логов
+  Logstash      :5000  (ClusterIP, TCP) — обработка логов (вход от микросервисов)
+  Kibana        :5601  (NodePort 30561) — UI для логов
 ```
 
 ### Микросервисы
@@ -54,6 +63,15 @@ Infrastructure (Kubernetes):
 - **Kafka Helm-сабчарт**: StatefulSet с PVC для персистентности данных топиков
 - **Топик `notifications`**: single partition, replication factor 1, at-least-once delivery
 
+### Изменения по сравнению со Sprint 11
+
+- **Zipkin**: трассировка HTTP, Kafka producer/consumer, JDBC через Micrometer Tracing (Brave bridge)
+- **Prometheus + Grafana**: сбор метрик (`/actuator/prometheus`), дашборды HTTP/JVM/business, алерты
+- **ELK-стек**: Elasticsearch + Logstash + Kibana. Логи отправляются TCP-аппендером (logstash-logback-encoder), JSON-формат с MDC `traceId`/`spanId` для связи с Zipkin
+- **Бизнес-метрики**: `cash.withdraw.failed{login}`, `transfer.failed{from_login,to_login}`, `notification.send.failed{login}`
+- **NotificationEvent**: добавлено поле `login` для группировки бизнес-метрик и логов по пользователю
+- **`/actuator/prometheus`** открыт без аутентификации (внутри кластера) для скрейпинга
+
 ---
 
 ## Технологии
@@ -67,6 +85,10 @@ Infrastructure (Kubernetes):
 - **PostgreSQL 16** + **Liquibase** — хранение данных accounts
 - **Kubernetes** + **Helm** — оркестрация и пакетный менеджер
 - **Gradle** (Groovy DSL), многомодульный проект
+- **Micrometer Tracing** + **Zipkin 3** — распределённая трассировка (HTTP, Kafka, JDBC)
+- **Micrometer + Spring Boot Actuator** + **Prometheus 3** + **Grafana 11** — метрики и дашборды
+- **Elasticsearch 8.16** + **Logstash 8.16** + **Kibana 8.16** — централизованное логирование
+- **logstash-logback-encoder** — отправка JSON-логов из Logback в Logstash по TCP
 
 ---
 
@@ -95,6 +117,110 @@ Infrastructure (Kubernetes):
 ### Консьюмер
 
 Сервис **notifications** читает сообщения через `@KafkaListener` и логирует их.
+
+---
+
+## Observability
+
+Все компоненты разворачиваются как Helm-сабчарты внутри Kubernetes-кластера, хранилища — in-memory (`emptyDir`).
+
+### Распределённая трассировка (Zipkin)
+
+- **URL**: http://localhost:30411
+- **Reporter**: Micrometer Tracing + Brave bridge → Zipkin v2 API
+- **Sampling**: 1.0 (все запросы)
+- **Что трассируется**:
+  - входящие/исходящие HTTP-запросы во всех 6 сервисах (servlet и WebFlux);
+  - Kafka producer/consumer (`setObservationEnabled(true)` в кастомных бинах);
+  - JDBC/Hibernate в `accounts` (через Spring Boot DataSource Observation);
+  - `traceId` пробрасывается между сервисами через заголовки B3.
+
+В Zipkin UI можно видеть полные цепочки: `front-ui → gateway → cash → accounts → kafka → notifications`.
+
+### Метрики (Prometheus + Grafana)
+
+- **Prometheus**: http://localhost:30909
+- **Grafana**: http://localhost:30300 (admin / admin)
+- **Скрейп**: каждые 15 секунд по `/actuator/prometheus` всех 6 сервисов (job_name = имя сервиса)
+
+Prometheus и Grafana datasource сконфигурированы автоматически (provisioning).
+
+#### Дашборд `My Bank Overview` (Grafana)
+
+| Группа | Панели |
+|--------|--------|
+| HTTP   | RPS, 5xx error rate, 4xx error rate, latency p50/p95/p99 |
+| JVM    | Heap used, Process CPU, Live threads, GC pause time |
+| Business | `cash.withdraw.failed{login}`, `transfer.failed{from_login,to_login}`, `notification.send.failed{login}` |
+
+#### Алерты Prometheus (`prometheus-alerts` ConfigMap)
+
+| Группа | Алерт | Условие |
+|--------|-------|---------|
+| http | HighHttp5xxRate | sum 5xx rate > 0.5 req/s в течение 1m |
+| http | HighRequestLatencyP95 | p95 latency > 1s в течение 5m |
+| jvm  | HighJvmHeapUsage | heap > 85% в течение 5m |
+| business | ManyFailedCashWithdrawals | rate > 0.1/s по логину в течение 2m |
+| business | ManyFailedTransfers | rate > 0.1/s по from_login в течение 2m |
+| business | NotificationDeliveryFailures | total rate > 0.1/s в течение 2m |
+
+Просмотр активных алертов: http://localhost:30909/alerts.
+
+#### Кастомные бизнес-метрики
+
+Реализованы через `MeterRegistry.counter(...)` в catch-блоках сервисов:
+
+```java
+// CashService.withdraw
+catch (RuntimeException e) {
+    meterRegistry.counter("cash.withdraw.failed", "login", login).increment();
+    throw e;
+}
+
+// TransferService.transfer
+catch (RuntimeException e) {
+    meterRegistry.counter("transfer.failed",
+            "from_login", fromLogin, "to_login", request.toLogin()).increment();
+    throw e;
+}
+
+// NotificationService.notify
+catch (RuntimeException e) {
+    meterRegistry.counter("notification.send.failed", "login", event.login()).increment();
+    throw e;
+}
+```
+
+В Prometheus имена экспонируются с `_total`-суффиксом: `cash_withdraw_failed_total` и т.д.
+
+### Логирование (ELK)
+
+- **Kibana**: http://localhost:30561
+- **Logstash**: TCP `5000` (json_lines codec)
+- **Elasticsearch**: индекс `my-bank-YYYY.MM.dd`
+
+Каждый сервис содержит `logback-spring.xml` с двумя аппендерами:
+- `CONSOLE` — стандартный паттерн с `[appName,traceId,spanId]` для локальной отладки;
+- `LOGSTASH` — `LogstashTcpSocketAppender` с `LogstashEncoder` (JSON), включает MDC `traceId`/`spanId` и customField `application`.
+
+`Micrometer Tracing` автоматически кладёт `traceId`/`spanId` в MDC, поэтому в Kibana по `traceId` можно найти все логи одного запроса и сопоставить их с трассой в Zipkin.
+
+#### Logstash-фильтры (маскирование)
+
+```
+"message", "(?i)(\"?password\"?\s*[:=]\s*\")[^\"]*", "\1***"
+"message", "(?i)(\"?account[_-]?number\"?\s*[:=]\s*\")[^\"]*", "\1***"
+"message", "\b(\d{4})\d{8}(\d{4})\b", "\1********\2"      # маска номера карты
+```
+
+#### Создание index pattern в Kibana
+
+При первом входе:
+1. Stack Management → Data Views → Create data view
+2. Name: `my-bank`, Index pattern: `my-bank-*`, Timestamp field: `@timestamp`
+3. Сохранить → перейти в Discover
+
+В каждой записи есть поля `application`, `traceId`, `spanId`, `level`, `logger_name`, `message` — можно фильтровать и искать.
 
 ---
 
@@ -175,6 +301,10 @@ helm uninstall my-bank
 |---------------|-------------------------------------|
 | Веб-интерфейс | http://localhost:30081              |
 | Keycloak      | http://localhost:30180              |
+| Zipkin        | http://localhost:30411              |
+| Prometheus    | http://localhost:30909              |
+| Grafana       | http://localhost:30300 (admin/admin) |
+| Kibana        | http://localhost:30561              |
 
 ### Тестовые пользователи (Keycloak realm `my-bank`)
 
@@ -214,7 +344,13 @@ helm/my-bank/                    # зонтичный чарт
     ├── transfer/                # Deployment + ClusterIP Service + ConfigMap
     ├── notifications/           # Deployment + ClusterIP Service + ConfigMap
     ├── gateway/                 # Deployment + ClusterIP Service + ConfigMap
-    └── front-ui/                # Deployment + NodePort Service + ConfigMap
+    ├── front-ui/                # Deployment + NodePort Service + ConfigMap
+    ├── zipkin/                  # Deployment + NodePort Service (in-memory)
+    ├── prometheus/              # Deployment + NodePort Service + ConfigMap (scrape + alerts)
+    ├── grafana/                 # Deployment + NodePort Service + ConfigMap (datasource + dashboards)
+    ├── elasticsearch/           # Deployment + ClusterIP Service (single-node, in-memory)
+    ├── logstash/                # Deployment + ClusterIP Service + ConfigMap (TCP input → ES output)
+    └── kibana/                  # Deployment + NodePort Service
 ```
 
 ### Helm-тесты
