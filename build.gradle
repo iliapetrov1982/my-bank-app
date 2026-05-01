@@ -41,6 +41,7 @@ subprojects {
         implementation 'io.micrometer:micrometer-tracing-bridge-brave'
         implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
         implementation 'io.micrometer:micrometer-registry-prometheus'
+        implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
         testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     }
 

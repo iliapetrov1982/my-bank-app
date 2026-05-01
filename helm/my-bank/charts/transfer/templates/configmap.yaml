@@ -10,3 +10,5 @@ data:
   APP_ACCOUNTS_URL: "http://accounts:8082"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
   MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin:9411/api/v2/spans"
+  LOGSTASH_HOST: "logstash"
+  LOGSTASH_PORT: "5000"
