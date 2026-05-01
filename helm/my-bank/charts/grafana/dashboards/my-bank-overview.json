@@ -1,0 +1,199 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "HTTP",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "HTTP Request Rate (RPS)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (job) (rate(http_server_requests_seconds_count[1m]))",
+        "legendFormat": "{{job}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "HTTP 5xx Error Rate",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (job) (rate(http_server_requests_seconds_count{status=~\"5..\"}[1m]))",
+        "legendFormat": "{{job}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "HTTP 4xx Error Rate",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (job) (rate(http_server_requests_seconds_count{status=~\"4..\"}[1m]))",
+        "legendFormat": "{{job}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "HTTP Latency (p50/p95/p99)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "histogram_quantile(0.5, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "{{job}} p50", "refId": "A"},
+        {"expr": "histogram_quantile(0.95, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "{{job}} p95", "refId": "B"},
+        {"expr": "histogram_quantile(0.99, sum by (job, le) (rate(http_server_requests_seconds_bucket[5m])))", "legendFormat": "{{job}} p99", "refId": "C"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "JVM",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "JVM Heap Used",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\"})",
+        "legendFormat": "{{job}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Process CPU Usage",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "process_cpu_usage",
+        "legendFormat": "{{job}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1, "min": 0}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "JVM Threads (live)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "jvm_threads_live_threads",
+        "legendFormat": "{{job}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "GC Pause Time (rate)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (job) (rate(jvm_gc_pause_seconds_sum[1m]))",
+        "legendFormat": "{{job}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Business",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 34},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Failed Cash Withdrawals (by login)",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 35},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (login) (rate(cash_withdraw_failed_total[5m]))",
+        "legendFormat": "{{login}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Failed Transfers (by from_login)",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 35},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (from_login, to_login) (rate(transfer_failed_total[5m]))",
+        "legendFormat": "{{from_login}} -> {{to_login}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Notification Send Failures (by login)",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 35},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "sum by (login) (rate(notification_send_failed_total[5m]))",
+        "legendFormat": "{{login}}",
+        "refId": "A"
+      }],
+      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}}
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["my-bank"],
+  "templating": {"list": []},
+  "time": {"from": "now-15m", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "My Bank Overview",
+  "uid": "my-bank-overview",
+  "version": 1,
+  "weekStart": ""
+}

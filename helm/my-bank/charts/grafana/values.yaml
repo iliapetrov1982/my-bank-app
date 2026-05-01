@@ -1,0 +1,13 @@
+image:
+  repository: grafana/grafana
+  tag: "11.4.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 30300
+
+admin:
+  user: admin
+  password: admin

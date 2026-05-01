@@ -16,6 +16,8 @@ dependencies:
     version: 0.1.0
   - name: prometheus
     version: 0.1.0
+  - name: grafana
+    version: 0.1.0
   - name: notifications
     version: 0.1.0
   - name: accounts

@@ -40,6 +40,18 @@ prometheus:
     port: 9090
     nodePort: 30909
 
+grafana:
+  image:
+    repository: grafana/grafana
+    tag: "11.4.0"
+  service:
+    type: NodePort
+    port: 3000
+    nodePort: 30300
+  admin:
+    user: admin
+    password: admin
+
 keycloak:
   image:
     repository: quay.io/keycloak/keycloak
