@@ -28,6 +28,7 @@ public class TransferService {
                             .formatted(request.toLogin()), e);
         }
         notificationProducer.send(new NotificationEvent(
+                fromLogin,
                 "Переведено %d руб. со счёта %s на счёт %s."
                         .formatted(request.amount(), fromLogin, request.toLogin())
         ));

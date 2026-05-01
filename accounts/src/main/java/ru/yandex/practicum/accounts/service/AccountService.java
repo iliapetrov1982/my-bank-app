@@ -35,6 +35,7 @@ public class AccountService {
         account.setBirthdate(request.birthdate());
         Account saved = accountRepository.save(account);
         notificationProducer.send(new NotificationEvent(
+                login,
                 "Аккаунт %s обновлён: имя=%s, дата рождения=%s"
                         .formatted(login, request.name(), request.birthdate())
         ));

@@ -21,6 +21,7 @@ public class CashService {
         AccountResponse account = accountsClient.deposit(login,
                 new BalanceOperationRequest(request.amount()));
         notificationProducer.send(new NotificationEvent(
+                login,
                 "Счёт %s пополнен на %d руб. Текущий баланс: %d руб."
                         .formatted(login, request.amount(), account.balance())
         ));
@@ -31,6 +32,7 @@ public class CashService {
         AccountResponse account = accountsClient.withdraw(login,
                 new BalanceOperationRequest(request.amount()));
         notificationProducer.send(new NotificationEvent(
+                login,
                 "Со счёта %s снято %d руб. Текущий баланс: %d руб."
                         .formatted(login, request.amount(), account.balance())
         ));
