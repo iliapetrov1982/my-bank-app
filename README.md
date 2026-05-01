@@ -65,12 +65,13 @@ Observability stack (Kubernetes, in-memory):
 
 ### Изменения по сравнению со Sprint 11
 
-- **Zipkin**: трассировка HTTP, Kafka producer/consumer, JDBC через Micrometer Tracing (Brave bridge)
-- **Prometheus + Grafana**: сбор метрик (`/actuator/prometheus`), дашборды HTTP/JVM/business, алерты
+- **Zipkin**: распределённая трассировка через `spring-boot-starter-zipkin` (Spring Boot 4). Покрывает HTTP cross-service, Kafka producer/consumer (с propagation через Kafka headers) и JDBC в `accounts` (`datasource-micrometer-spring-boot`). Front UI `RestClient` сконфигурирован с `ObservationRegistry`, поэтому пользовательский HTTP-flow попадает в общий trace.
+- **Prometheus + Grafana**: сбор метрик (`/actuator/prometheus`), дашборды HTTP/JVM/business, алерты. Дополнительно собираются JDBC-метрики (`jdbc_connection_*`, `jdbc_connections_active/idle/max`).
 - **ELK-стек**: Elasticsearch + Logstash + Kibana. Логи отправляются TCP-аппендером (logstash-logback-encoder), JSON-формат с MDC `traceId`/`spanId` для связи с Zipkin
 - **Бизнес-метрики**: `cash.withdraw.failed{login}`, `transfer.failed{from_login,to_login}`, `notification.send.failed{login}`
 - **NotificationEvent**: добавлено поле `login` для группировки бизнес-метрик и логов по пользователю
 - **`/actuator/prometheus`** открыт без аутентификации (внутри кластера) для скрейпинга
+- **Notifications consumer**: `JacksonJsonDeserializer.setUseTypeHeaders(false)` — игнорирует FQN `__TypeId__` в Kafka header (продюсеры в разных модулях имеют разные FQN для `NotificationEvent`)
 
 ---
 
@@ -85,10 +86,11 @@ Observability stack (Kubernetes, in-memory):
 - **PostgreSQL 16** + **Liquibase** — хранение данных accounts
 - **Kubernetes** + **Helm** — оркестрация и пакетный менеджер
 - **Gradle** (Groovy DSL), многомодульный проект
-- **Micrometer Tracing** + **Zipkin 3** — распределённая трассировка (HTTP, Kafka, JDBC)
+- **Spring Boot Tracing** (`spring-boot-starter-zipkin`) + **Brave 6** + **Zipkin 3** — распределённая трассировка (HTTP, Kafka, JDBC)
+- **datasource-micrometer-spring-boot 2.2.1** — JDBC-инструментация (спаны `connection/query/result-set`, метрики `jdbc_*`)
 - **Micrometer + Spring Boot Actuator** + **Prometheus 3** + **Grafana 11** — метрики и дашборды
 - **Elasticsearch 8.16** + **Logstash 8.16** + **Kibana 8.16** — централизованное логирование
-- **logstash-logback-encoder** — отправка JSON-логов из Logback в Logstash по TCP
+- **logstash-logback-encoder 8** — отправка JSON-логов из Logback в Logstash по TCP
 
 ---
 
@@ -127,15 +129,25 @@ Observability stack (Kubernetes, in-memory):
 ### Распределённая трассировка (Zipkin)
 
 - **URL**: http://localhost:30411
-- **Reporter**: Micrometer Tracing + Brave bridge → Zipkin v2 API
+- **Стартер**: `spring-boot-starter-zipkin` (Spring Boot 4 объединённый стартер: Micrometer Tracing + Brave bridge + Zipkin reporter)
 - **Sampling**: 1.0 (все запросы)
+- **Endpoint**: `management.tracing.export.zipkin.endpoint` → `http://zipkin:9411/api/v2/spans`
 - **Что трассируется**:
   - входящие/исходящие HTTP-запросы во всех 6 сервисах (servlet и WebFlux);
-  - Kafka producer/consumer (`setObservationEnabled(true)` в кастомных бинах);
-  - JDBC/Hibernate в `accounts` (через Spring Boot DataSource Observation);
-  - `traceId` пробрасывается между сервисами через заголовки B3.
+  - **Kafka producer/consumer** — `KafkaTemplate.setObservationEnabled(true) + setObservationRegistry(...)` в продюсерах, `ContainerProperties.setObservationEnabled/Registry` в консьюмере. Trace context пробрасывается через Kafka headers, поэтому producer-span и consumer-span попадают в один trace;
+  - **JDBC** в `accounts` — через `net.ttddyy.observation:datasource-micrometer-spring-boot:2.2.1`. Декорирует DataSource: на каждый запрос видны спаны `connection / query / result-set`;
+  - **Front UI HTTP клиент** — `RestClient.Builder` явно настроен с `ObservationRegistry`, поэтому исходящие вызовы из браузерного flow тоже несут trace id и продолжают цепочку в gateway;
+  - `traceId` пробрасывается между сервисами через заголовки B3 (HTTP) и Kafka record headers.
 
-В Zipkin UI можно видеть полные цепочки: `front-ui → gateway → cash → accounts → kafka → notifications`.
+В Zipkin UI видна полная цепочка одного действия пользователя:
+```
+[front-ui]      SERVER   POST /transfer
+[front-ui]      CLIENT   http get  ───────────────────────► [gateway → accounts]  (JDBC: connection/query/result-set)
+[front-ui]      CLIENT   http post ───────────────────────► [gateway → transfer]
+                                                                [transfer] PRODUCER notifications send
+                                                                                    ▲
+                                                              [notifications] CONSUMER notifications process
+```
 
 ### Метрики (Prometheus + Grafana)
 
