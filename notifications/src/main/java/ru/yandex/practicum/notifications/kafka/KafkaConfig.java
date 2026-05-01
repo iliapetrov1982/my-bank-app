@@ -1,5 +1,6 @@
 package ru.yandex.practicum.notifications.kafka;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -48,11 +49,13 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, NotificationEvent> kafkaListenerContainerFactory(
-            ConsumerFactory<String, NotificationEvent> consumerFactory) {
+            ConsumerFactory<String, NotificationEvent> consumerFactory,
+            ObservationRegistry observationRegistry) {
         ConcurrentKafkaListenerContainerFactory<String, NotificationEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.getContainerProperties().setObservationEnabled(true);
+        factory.getContainerProperties().setObservationRegistry(observationRegistry);
         return factory;
     }
 }
