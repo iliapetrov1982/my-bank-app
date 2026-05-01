@@ -18,6 +18,12 @@ dependencies:
     version: 0.1.0
   - name: grafana
     version: 0.1.0
+  - name: elasticsearch
+    version: 0.1.0
+  - name: logstash
+    version: 0.1.0
+  - name: kibana
+    version: 0.1.0
   - name: notifications
     version: 0.1.0
   - name: accounts

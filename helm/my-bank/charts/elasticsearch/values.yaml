@@ -1,0 +1,10 @@
+image:
+  repository: docker.elastic.co/elasticsearch/elasticsearch
+  tag: "8.16.1"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 9200
+
+javaOpts: "-Xms512m -Xmx512m"
