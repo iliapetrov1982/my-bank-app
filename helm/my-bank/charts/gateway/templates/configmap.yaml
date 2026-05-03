@@ -9,3 +9,6 @@ data:
   ACCOUNTS_URI: "http://accounts:8082"
   CASH_URI: "http://cash:8083"
   TRANSFER_URI: "http://transfer:8084"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://zipkin:9411/api/v2/spans"
+  LOGSTASH_HOST: "logstash"
+  LOGSTASH_PORT: "5000"

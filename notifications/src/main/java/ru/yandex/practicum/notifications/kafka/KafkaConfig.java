@@ -1,5 +1,6 @@
 package ru.yandex.practicum.notifications.kafka;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -42,16 +43,26 @@ public class KafkaConfig {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(),
-                new JacksonJsonDeserializer<>(NotificationEvent.class));
+        JacksonJsonDeserializer<NotificationEvent> valueDeserializer =
+                new JacksonJsonDeserializer<>(NotificationEvent.class);
+        valueDeserializer.addTrustedPackages("*");
+        // Producers send their own class FQN in the __TypeId__ header (e.g.
+        // ru.yandex.practicum.accounts.kafka.NotificationEvent), but on this side
+        // only ru.yandex.practicum.notifications.kafka.NotificationEvent exists.
+        // Ignore the header and always deserialize into the target class.
+        valueDeserializer.setUseTypeHeaders(false);
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), valueDeserializer);
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, NotificationEvent> kafkaListenerContainerFactory(
-            ConsumerFactory<String, NotificationEvent> consumerFactory) {
+            ConsumerFactory<String, NotificationEvent> consumerFactory,
+            ObservationRegistry observationRegistry) {
         ConcurrentKafkaListenerContainerFactory<String, NotificationEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
+        factory.getContainerProperties().setObservationEnabled(true);
+        factory.getContainerProperties().setObservationRegistry(observationRegistry);
         return factory;
     }
 }

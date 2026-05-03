@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: logstash
+  labels:
+    {{- include "logstash.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.tcpPort }}
+      targetPort: {{ .Values.service.tcpPort }}
+      name: tcp
+      protocol: TCP
+  selector:
+    {{- include "logstash.selectorLabels" . | nindent 4 }}

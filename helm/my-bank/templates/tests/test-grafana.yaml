@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-test-grafana"
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: test
+      image: busybox
+      command: ['sh', '-c', 'for i in $(seq 1 30); do nc -z grafana 3000 && exit 0; sleep 2; done; exit 1']
+  restartPolicy: Never

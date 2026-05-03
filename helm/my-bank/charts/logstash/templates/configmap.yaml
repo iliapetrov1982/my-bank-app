@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  labels:
+    {{- include "logstash.labels" . | nindent 4 }}
+data:
+  logstash.yml: |
+    http.host: "0.0.0.0"
+    xpack.monitoring.enabled: false
+  pipelines.yml: |
+    - pipeline.id: main
+      path.config: "/usr/share/logstash/pipeline"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-pipeline
+  labels:
+    {{- include "logstash.labels" . | nindent 4 }}
+data:
+  logstash.conf: |
+    input {
+      tcp {
+        port => {{ .Values.service.tcpPort }}
+        codec => json_lines
+      }
+    }
+    filter {
+      # mask sensitive fields in any string event field
+      mutate {
+        gsub => [
+          "message", "(?i)(\"?password\"?\s*[:=]\s*\")[^\"]*", "\1***",
+          "message", "(?i)(\"?account[_-]?number\"?\s*[:=]\s*\")[^\"]*", "\1***",
+          "message", "\b(\d{4})\d{8}(\d{4})\b", "\1********\2"
+        ]
+      }
+    }
+    output {
+      elasticsearch {
+        hosts => ["http://elasticsearch:9200"]
+        index => "my-bank-%{+YYYY.MM.dd}"
+      }
+    }

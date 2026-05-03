@@ -18,3 +18,23 @@ spring:
 app:
   kafka:
     notifications-topic: ${APP_KAFKA_NOTIFICATIONS_TOPIC:notifications}
+
+logstash:
+  host: ${LOGSTASH_HOST:localhost}
+  port: ${LOGSTASH_PORT:5000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+    export:
+      zipkin:
+        endpoint: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:http://localhost:9411/api/v2/spans}
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

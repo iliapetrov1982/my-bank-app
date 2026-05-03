@@ -1,6 +1,7 @@
 package ru.yandex.practicum.accounts.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.accounts.kafka.NotificationEvent;
@@ -15,6 +16,7 @@ import ru.yandex.practicum.accounts.model.Account;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService {
@@ -30,11 +32,13 @@ public class AccountService {
 
     @Transactional
     public AccountResponse updateAccount(String login, UpdateAccountRequest request) {
+        log.info("Update account: login={}", login);
         Account account = findByLogin(login);
         account.setName(request.name());
         account.setBirthdate(request.birthdate());
         Account saved = accountRepository.save(account);
         notificationProducer.send(new NotificationEvent(
+                login,
                 "Аккаунт %s обновлён: имя=%s, дата рождения=%s"
                         .formatted(login, request.name(), request.birthdate())
         ));
@@ -50,6 +54,7 @@ public class AccountService {
 
     @Transactional
     public AccountResponse deposit(String login, BalanceOperationRequest request) {
+        log.info("Deposit: login={}, amount={}", login, request.amount());
         Account account = findByLogin(login);
         account.setBalance(account.getBalance() + request.amount());
         Account saved = accountRepository.save(account);
@@ -58,8 +63,11 @@ public class AccountService {
 
     @Transactional
     public AccountResponse withdraw(String login, BalanceOperationRequest request) {
+        log.info("Withdraw: login={}, amount={}", login, request.amount());
         Account account = findByLogin(login);
         if (account.getBalance() < request.amount()) {
+            log.warn("Insufficient funds: login={}, balance={}, requested={}",
+                    login, account.getBalance(), request.amount());
             throw new IllegalStateException("Недостаточно средств на счету");
         }
         account.setBalance(account.getBalance() - request.amount());

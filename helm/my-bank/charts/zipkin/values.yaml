@@ -1,0 +1,9 @@
+image:
+  repository: openzipkin/zipkin
+  tag: "3"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 9411
+  nodePort: 30411

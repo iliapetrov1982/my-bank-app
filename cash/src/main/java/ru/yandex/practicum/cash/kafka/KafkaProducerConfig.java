@@ -1,5 +1,6 @@
 package ru.yandex.practicum.cash.kafka;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -33,8 +34,12 @@ public class KafkaProducerConfig {
 
     @Bean
     public KafkaTemplate<String, NotificationEvent> kafkaTemplate(
-            ProducerFactory<String, NotificationEvent> producerFactory) {
-        return new KafkaTemplate<>(producerFactory);
+            ProducerFactory<String, NotificationEvent> producerFactory,
+            ObservationRegistry observationRegistry) {
+        KafkaTemplate<String, NotificationEvent> template = new KafkaTemplate<>(producerFactory);
+        template.setObservationEnabled(true);
+        template.setObservationRegistry(observationRegistry);
+        return template;
     }
 
     @Bean
