@@ -1,14 +1,13 @@
 # my-bank-app
-
-Учебный проект — банковское приложение на микросервисной архитектуре.  
-Реализован в рамках **Sprint 12** курса Яндекс Практикум (Java-разработчик).  
-Развёртывание микросервисов в **Kubernetes** с использованием **Helm-чартов**.  
-Взаимодействие с сервисом уведомлений через **Apache Kafka**.  
-Распределённая трассировка (**Zipkin**), метрики (**Prometheus + Grafana**) и логирование (**ELK**).
+Educational project — a banking application built on a microservices architecture.  
+Implemented as part of **Sprint 12** of the Yandex Practicum course (Java developer).  
+Microservices are deployed to **Kubernetes** using **Helm charts**.  
+Interaction with the notifications service is done through **Apache Kafka**.  
+Distributed tracing (**Zipkin**), metrics (**Prometheus + Grafana**) and logging (**ELK**).
 
 ---
 
-## Архитектура
+## Architecture
 
 ```
 Browser (http://localhost:30081)
@@ -22,124 +21,124 @@ Browser (http://localhost:30081)
               └── transfer :8084  (REST, Feign → accounts)
 
               accounts ──┐
-              cash     ──┼── Kafka (топик: notifications) ──► notifications :8085
+              cash     ──┼── Kafka (topic: notifications) ──► notifications :8085
               transfer ──┘
 
 Infrastructure (Kubernetes):
   PostgreSQL StatefulSet :5432
   Kafka StatefulSet      :9092  (KRaft mode, single node, PVC)
   Keycloak Deployment    :8080  (NodePort 30180)
-  ConfigMaps + Secrets   (вместо Eureka + Config Server)
+  ConfigMaps + Secrets   (instead of Eureka + Config Server)
 
 Observability stack (Kubernetes, in-memory):
-  Zipkin        :9411  (NodePort 30411) — распределённая трассировка
-  Prometheus    :9090  (NodePort 30909) — сбор метрик и алерты
-  Grafana       :3000  (NodePort 30300) — дашборды графиков
-  Elasticsearch :9200  (ClusterIP)      — хранилище логов
-  Logstash      :5000  (ClusterIP, TCP) — обработка логов (вход от микросервисов)
-  Kibana        :5601  (NodePort 30561) — UI для логов
+  Zipkin        :9411  (NodePort 30411) — distributed tracing
+  Prometheus    :9090  (NodePort 30909) — metric collection and alerts
+  Grafana       :3000  (NodePort 30300) — dashboards
+  Elasticsearch :9200  (ClusterIP)      — log storage
+  Logstash      :5000  (ClusterIP, TCP) — log processing (input from microservices)
+  Kibana        :5601  (NodePort 30561) — log UI
 ```
 
-### Микросервисы
+### Microservices
 
-| Сервис        | Порт | K8s Service | Описание                                                  |
-|---------------|------|-------------|-----------------------------------------------------------|
-| gateway       | 8080 | ClusterIP   | API Gateway с circuit breaker (Resilience4j) и TokenRelay |
-| front-ui      | 8081 | NodePort 30081 | Веб-интерфейс пользователя (Thymeleaf)                 |
-| accounts      | 8082 | ClusterIP   | Управление счетами, депозит/снятие                        |
-| cash          | 8083 | ClusterIP   | Кассовые операции (вносит/снимает наличные)               |
-| transfer      | 8084 | ClusterIP   | Переводы между счетами                                    |
-| notifications | 8085 | ClusterIP   | Сервис уведомлений (Kafka consumer)                       |
-| kafka         | 9092 | ClusterIP   | Apache Kafka (KRaft, single node, StatefulSet)            |
-| keycloak      | 8080 | NodePort 30180 | OAuth 2.0 сервер авторизации                           |
-| postgres      | 5432 | ClusterIP   | PostgreSQL 16 (StatefulSet)                               |
+| Service       | Port | K8s Service    | Description                                                |
+|---------------|------|----------------|------------------------------------------------------------|
+| gateway       | 8080 | ClusterIP      | API Gateway with circuit breaker (Resilience4j) and TokenRelay |
+| front-ui      | 8081 | NodePort 30081 | User-facing web interface (Thymeleaf)                      |
+| accounts      | 8082 | ClusterIP      | Account management, deposit/withdraw                       |
+| cash          | 8083 | ClusterIP      | Cash operations (deposit/withdraw cash)                    |
+| transfer      | 8084 | ClusterIP      | Transfers between accounts                                 |
+| notifications | 8085 | ClusterIP      | Notifications service (Kafka consumer)                     |
+| kafka         | 9092 | ClusterIP      | Apache Kafka (KRaft, single node, StatefulSet)             |
+| keycloak      | 8080 | NodePort 30180 | OAuth 2.0 authorization server                             |
+| postgres      | 5432 | ClusterIP      | PostgreSQL 16 (StatefulSet)                                |
 
-### Изменения по сравнению со Sprint 10
+### Changes compared to Sprint 10
 
-- **Apache Kafka**: добавлена распределённая платформа для асинхронного обмена сообщениями
-- **Notifications**: REST API заменён на Kafka consumer (`@KafkaListener`)
-- **Accounts, Cash, Transfer**: Feign-клиент к Notifications заменён на Kafka producer (`KafkaTemplate`)
-- **OAuth2 Client Credentials**: удалены из accounts (больше не нужен для вызова notifications); из cash/transfer убран scope `notifications.write`
-- **Kafka Helm-сабчарт**: StatefulSet с PVC для персистентности данных топиков
-- **Топик `notifications`**: single partition, replication factor 1, at-least-once delivery
+- **Apache Kafka**: a distributed platform for asynchronous messaging has been added
+- **Notifications**: the REST API has been replaced by a Kafka consumer (`@KafkaListener`)
+- **Accounts, Cash, Transfer**: the Feign client to Notifications has been replaced by a Kafka producer (`KafkaTemplate`)
+- **OAuth2 Client Credentials**: removed from accounts (no longer needed for calling notifications); the `notifications.write` scope has been removed from cash/transfer
+- **Kafka Helm subchart**: StatefulSet with a PVC for persistence of topic data
+- **Topic `notifications`**: single partition, replication factor 1, at-least-once delivery
 
-### Изменения по сравнению со Sprint 11
+### Changes compared to Sprint 11
 
-- **Zipkin**: распределённая трассировка через `spring-boot-starter-zipkin` (Spring Boot 4). Покрывает HTTP cross-service, Kafka producer/consumer (с propagation через Kafka headers) и JDBC в `accounts` (`datasource-micrometer-spring-boot`). Front UI `RestClient` сконфигурирован с `ObservationRegistry`, поэтому пользовательский HTTP-flow попадает в общий trace.
-- **Prometheus + Grafana**: сбор метрик (`/actuator/prometheus`), дашборды HTTP/JVM/business, алерты. Дополнительно собираются JDBC-метрики (`jdbc_connection_*`, `jdbc_connections_active/idle/max`).
-- **ELK-стек**: Elasticsearch + Logstash + Kibana. Логи отправляются TCP-аппендером (logstash-logback-encoder), JSON-формат с MDC `traceId`/`spanId` для связи с Zipkin
-- **Бизнес-метрики**: `cash.withdraw.failed{login}`, `transfer.failed{from_login,to_login}`, `notification.send.failed{login}`
-- **NotificationEvent**: добавлено поле `login` для группировки бизнес-метрик и логов по пользователю
-- **`/actuator/prometheus`** открыт без аутентификации (внутри кластера) для скрейпинга
-- **Notifications consumer**: `JacksonJsonDeserializer.setUseTypeHeaders(false)` — игнорирует FQN `__TypeId__` в Kafka header (продюсеры в разных модулях имеют разные FQN для `NotificationEvent`)
+- **Zipkin**: distributed tracing via `spring-boot-starter-zipkin` (Spring Boot 4). Covers cross-service HTTP, Kafka producer/consumer (with propagation through Kafka headers) and JDBC in `accounts` (`datasource-micrometer-spring-boot`). The Front UI `RestClient` is configured with an `ObservationRegistry`, so the user-driven HTTP flow ends up in the same trace.
+- **Prometheus + Grafana**: metric collection (`/actuator/prometheus`), HTTP/JVM/business dashboards, alerts. JDBC metrics are also collected (`jdbc_connection_*`, `jdbc_connections_active/idle/max`).
+- **ELK stack**: Elasticsearch + Logstash + Kibana. Logs are sent via a TCP appender (logstash-logback-encoder), JSON format with MDC `traceId`/`spanId` to link with Zipkin
+- **Business metrics**: `cash.withdraw.failed{login}`, `transfer.failed{from_login,to_login}`, `notification.send.failed{login}`
+- **NotificationEvent**: a `login` field has been added so that business metrics and logs can be grouped per user
+- **`/actuator/prometheus`** is exposed without authentication (inside the cluster) for scraping
+- **Notifications consumer**: `JacksonJsonDeserializer.setUseTypeHeaders(false)` — ignores the FQN in the `__TypeId__` Kafka header (producers in different modules have different FQNs for `NotificationEvent`)
 
 ---
 
-## Технологии
+## Technologies
 
 - **Java 21**, **Spring Boot 4.0.4**, **Spring Cloud 2025.1.1**
 - **Apache Kafka 3.9.0** (KRaft mode) + **Spring Kafka 4.0.4**
-- **Spring Security** — OAuth2 Authorization Code (front-ui) + Client Credentials (сервис-to-сервис)
+- **Spring Security** — OAuth2 Authorization Code (front-ui) + Client Credentials (service-to-service)
 - **Keycloak 26** — Identity Provider, realm `my-bank`
-- **OpenFeign** — межсервисное взаимодействие accounts ← cash/transfer (с OAuth2 токенами)
+- **OpenFeign** — inter-service communication accounts ← cash/transfer (with OAuth2 tokens)
 - **Spring Cloud Gateway** — WebFlux, circuit breaker, TokenRelay
-- **PostgreSQL 16** + **Liquibase** — хранение данных accounts
-- **Kubernetes** + **Helm** — оркестрация и пакетный менеджер
-- **Gradle** (Groovy DSL), многомодульный проект
-- **Spring Boot Tracing** (`spring-boot-starter-zipkin`) + **Brave 6** + **Zipkin 3** — распределённая трассировка (HTTP, Kafka, JDBC)
-- **datasource-micrometer-spring-boot 2.2.1** — JDBC-инструментация (спаны `connection/query/result-set`, метрики `jdbc_*`)
-- **Micrometer + Spring Boot Actuator** + **Prometheus 3** + **Grafana 11** — метрики и дашборды
-- **Elasticsearch 8.16** + **Logstash 8.16** + **Kibana 8.16** — централизованное логирование
-- **logstash-logback-encoder 8** — отправка JSON-логов из Logback в Logstash по TCP
+- **PostgreSQL 16** + **Liquibase** — data storage for accounts
+- **Kubernetes** + **Helm** — orchestration and package manager
+- **Gradle** (Groovy DSL), multi-module project
+- **Spring Boot Tracing** (`spring-boot-starter-zipkin`) + **Brave 6** + **Zipkin 3** — distributed tracing (HTTP, Kafka, JDBC)
+- **datasource-micrometer-spring-boot 2.2.1** — JDBC instrumentation (`connection/query/result-set` spans, `jdbc_*` metrics)
+- **Micrometer + Spring Boot Actuator** + **Prometheus 3** + **Grafana 11** — metrics and dashboards
+- **Elasticsearch 8.16** + **Logstash 8.16** + **Kibana 8.16** — centralized logging
+- **logstash-logback-encoder 8** — shipping JSON logs from Logback to Logstash over TCP
 
 ---
 
 ## Apache Kafka
 
-### Конфигурация
+### Configuration
 
-- **Режим**: KRaft (без ZooKeeper), single node
-- **Топик**: `notifications` (1 partition, 1 replica)
-- **Сериализация**: JSON (`JsonSerializer` / `JsonDeserializer`)
-- **Семантика доставки**: at-least-once (Spring Kafka AckMode.BATCH, auto.commit=false)
-- **Порядок сообщений**: не гарантируется (unordered)
-- **Персистентность**: PersistentVolumeClaim — данные топиков сохраняются при перезапуске подов
-- **Consumer group**: `notifications-group` — при рестарте notifications продолжает с последнего коммита offset
+- **Mode**: KRaft (no ZooKeeper), single node
+- **Topic**: `notifications` (1 partition, 1 replica)
+- **Serialization**: JSON (`JsonSerializer` / `JsonDeserializer`)
+- **Delivery semantics**: at-least-once (Spring Kafka AckMode.BATCH, auto.commit=false)
+- **Message ordering**: not guaranteed (unordered)
+- **Persistence**: PersistentVolumeClaim — topic data survives pod restarts
+- **Consumer group**: `notifications-group` — on restart, notifications continues from the last committed offset
 
-### Продюсеры
+### Producers
 
-Сервисы **accounts**, **cash** и **transfer** публикуют JSON-сообщения в топик `notifications`:
+The **accounts**, **cash** and **transfer** services publish JSON messages to the `notifications` topic:
 
 ```json
 {
-  "message": "Счёт ivan пополнен на 100 руб. Текущий баланс: 1100 руб."
+  "message": "Account ivan has been topped up by 100 rub. Current balance: 1100 rub."
 }
 ```
 
-### Консьюмер
+### Consumer
 
-Сервис **notifications** читает сообщения через `@KafkaListener` и логирует их.
+The **notifications** service reads messages via `@KafkaListener` and logs them.
 
 ---
 
 ## Observability
 
-Все компоненты разворачиваются как Helm-сабчарты внутри Kubernetes-кластера, хранилища — in-memory (`emptyDir`).
+All components are deployed as Helm subcharts inside the Kubernetes cluster; storage is in-memory (`emptyDir`).
 
-### Распределённая трассировка (Zipkin)
+### Distributed tracing (Zipkin)
 
 - **URL**: http://localhost:30411
-- **Стартер**: `spring-boot-starter-zipkin` (Spring Boot 4 объединённый стартер: Micrometer Tracing + Brave bridge + Zipkin reporter)
-- **Sampling**: 1.0 (все запросы)
+- **Starter**: `spring-boot-starter-zipkin` (Spring Boot 4 combined starter: Micrometer Tracing + Brave bridge + Zipkin reporter)
+- **Sampling**: 1.0 (every request)
 - **Endpoint**: `management.tracing.export.zipkin.endpoint` → `http://zipkin:9411/api/v2/spans`
-- **Что трассируется**:
-  - входящие/исходящие HTTP-запросы во всех 6 сервисах (servlet и WebFlux);
-  - **Kafka producer/consumer** — `KafkaTemplate.setObservationEnabled(true) + setObservationRegistry(...)` в продюсерах, `ContainerProperties.setObservationEnabled/Registry` в консьюмере. Trace context пробрасывается через Kafka headers, поэтому producer-span и consumer-span попадают в один trace;
-  - **JDBC** в `accounts` — через `net.ttddyy.observation:datasource-micrometer-spring-boot:2.2.1`. Декорирует DataSource: на каждый запрос видны спаны `connection / query / result-set`;
-  - **Front UI HTTP клиент** — `RestClient.Builder` явно настроен с `ObservationRegistry`, поэтому исходящие вызовы из браузерного flow тоже несут trace id и продолжают цепочку в gateway;
-  - `traceId` пробрасывается между сервисами через заголовки B3 (HTTP) и Kafka record headers.
+- **What is traced**:
+  - incoming/outgoing HTTP requests in all 6 services (servlet and WebFlux);
+  - **Kafka producer/consumer** — `KafkaTemplate.setObservationEnabled(true) + setObservationRegistry(...)` in producers, `ContainerProperties.setObservationEnabled/Registry` in the consumer. Trace context is propagated through Kafka headers, so the producer span and the consumer span end up in the same trace;
+  - **JDBC** in `accounts` — via `net.ttddyy.observation:datasource-micrometer-spring-boot:2.2.1`. It decorates the DataSource: each request shows `connection / query / result-set` spans;
+  - **Front UI HTTP client** — `RestClient.Builder` is explicitly configured with an `ObservationRegistry`, so outgoing calls from the browser flow also carry a trace id and continue the chain into the gateway;
+  - `traceId` is propagated between services via B3 headers (HTTP) and Kafka record headers.
 
-В Zipkin UI видна полная цепочка одного действия пользователя:
+In the Zipkin UI you can see the full chain of a single user action:
 ```
 [front-ui]      SERVER   POST /transfer
 [front-ui]      CLIENT   http get  ───────────────────────► [gateway → accounts]  (JDBC: connection/query/result-set)
@@ -149,38 +148,38 @@ Observability stack (Kubernetes, in-memory):
                                                               [notifications] CONSUMER notifications process
 ```
 
-### Метрики (Prometheus + Grafana)
+### Metrics (Prometheus + Grafana)
 
 - **Prometheus**: http://localhost:30909
 - **Grafana**: http://localhost:30300 (admin / admin)
-- **Скрейп**: каждые 15 секунд по `/actuator/prometheus` всех 6 сервисов (job_name = имя сервиса)
+- **Scrape**: every 15 seconds at `/actuator/prometheus` of all 6 services (job_name = service name)
 
-Prometheus и Grafana datasource сконфигурированы автоматически (provisioning).
+Prometheus and the Grafana datasource are configured automatically (provisioning).
 
-#### Дашборд `My Bank Overview` (Grafana)
+#### `My Bank Overview` dashboard (Grafana)
 
-| Группа | Панели |
-|--------|--------|
-| HTTP   | RPS, 5xx error rate, 4xx error rate, latency p50/p95/p99 |
-| JVM    | Heap used, Process CPU, Live threads, GC pause time |
+| Group    | Panels |
+|----------|--------|
+| HTTP     | RPS, 5xx error rate, 4xx error rate, latency p50/p95/p99 |
+| JVM      | Heap used, Process CPU, Live threads, GC pause time |
 | Business | `cash.withdraw.failed{login}`, `transfer.failed{from_login,to_login}`, `notification.send.failed{login}` |
 
-#### Алерты Prometheus (`prometheus-alerts` ConfigMap)
+#### Prometheus alerts (`prometheus-alerts` ConfigMap)
 
-| Группа | Алерт | Условие |
-|--------|-------|---------|
-| http | HighHttp5xxRate | sum 5xx rate > 0.5 req/s в течение 1m |
-| http | HighRequestLatencyP95 | p95 latency > 1s в течение 5m |
-| jvm  | HighJvmHeapUsage | heap > 85% в течение 5m |
-| business | ManyFailedCashWithdrawals | rate > 0.1/s по логину в течение 2m |
-| business | ManyFailedTransfers | rate > 0.1/s по from_login в течение 2m |
-| business | NotificationDeliveryFailures | total rate > 0.1/s в течение 2m |
+| Group    | Alert | Condition |
+|----------|-------|-----------|
+| http     | HighHttp5xxRate | sum 5xx rate > 0.5 req/s for 1m |
+| http     | HighRequestLatencyP95 | p95 latency > 1s for 5m |
+| jvm      | HighJvmHeapUsage | heap > 85% for 5m |
+| business | ManyFailedCashWithdrawals | rate > 0.1/s per login for 2m |
+| business | ManyFailedTransfers | rate > 0.1/s per from_login for 2m |
+| business | NotificationDeliveryFailures | total rate > 0.1/s for 2m |
 
-Просмотр активных алертов: http://localhost:30909/alerts.
+View active alerts: http://localhost:30909/alerts.
 
-#### Кастомные бизнес-метрики
+#### Custom business metrics
 
-Реализованы через `MeterRegistry.counter(...)` в catch-блоках сервисов:
+Implemented through `MeterRegistry.counter(...)` in catch blocks of the services:
 
 ```java
 // CashService.withdraw
@@ -203,76 +202,76 @@ catch (RuntimeException e) {
 }
 ```
 
-В Prometheus имена экспонируются с `_total`-суффиксом: `cash_withdraw_failed_total` и т.д.
+In Prometheus, the names are exposed with a `_total` suffix: `cash_withdraw_failed_total`, etc.
 
-### Логирование (ELK)
+### Logging (ELK)
 
 - **Kibana**: http://localhost:30561
 - **Logstash**: TCP `5000` (json_lines codec)
-- **Elasticsearch**: индекс `my-bank-YYYY.MM.dd`
+- **Elasticsearch**: index `my-bank-YYYY.MM.dd`
 
-Каждый сервис содержит `logback-spring.xml` с двумя аппендерами:
-- `CONSOLE` — стандартный паттерн с `[appName,traceId,spanId]` для локальной отладки;
-- `LOGSTASH` — `LogstashTcpSocketAppender` с `LogstashEncoder` (JSON), включает MDC `traceId`/`spanId` и customField `application`.
+Each service contains a `logback-spring.xml` with two appenders:
+- `CONSOLE` — standard pattern with `[appName,traceId,spanId]` for local debugging;
+- `LOGSTASH` — `LogstashTcpSocketAppender` with `LogstashEncoder` (JSON), includes MDC `traceId`/`spanId` and the customField `application`.
 
-`Micrometer Tracing` автоматически кладёт `traceId`/`spanId` в MDC, поэтому в Kibana по `traceId` можно найти все логи одного запроса и сопоставить их с трассой в Zipkin.
+`Micrometer Tracing` automatically puts `traceId`/`spanId` into MDC, so in Kibana you can use `traceId` to find all logs of a single request and correlate them with the trace in Zipkin.
 
-#### Logstash-фильтры (маскирование)
+#### Logstash filters (masking)
 
 ```
 "message", "(?i)(\"?password\"?\s*[:=]\s*\")[^\"]*", "\1***"
 "message", "(?i)(\"?account[_-]?number\"?\s*[:=]\s*\")[^\"]*", "\1***"
-"message", "\b(\d{4})\d{8}(\d{4})\b", "\1********\2"      # маска номера карты
+"message", "\b(\d{4})\d{8}(\d{4})\b", "\1********\2"      # card number mask
 ```
 
-#### Создание index pattern в Kibana
+#### Creating an index pattern in Kibana
 
-При первом входе:
+On first login:
 1. Stack Management → Data Views → Create data view
 2. Name: `my-bank`, Index pattern: `my-bank-*`, Timestamp field: `@timestamp`
-3. Сохранить → перейти в Discover
+3. Save → go to Discover
 
-В каждой записи есть поля `application`, `traceId`, `spanId`, `level`, `logger_name`, `message` — можно фильтровать и искать.
+Every record has the fields `application`, `traceId`, `spanId`, `level`, `logger_name`, `message` — you can filter and search by them.
 
 ---
 
-## Безопасность
+## Security
 
 ```
 Authorization Code Flow:
-  Browser → front-ui → Keycloak (NodePort 30180) → front-ui (получает токен пользователя)
+  Browser → front-ui → Keycloak (NodePort 30180) → front-ui (receives the user's token)
   front-ui → gateway (Bearer token) → business services
 
-Client Credentials Flow (сервис-to-сервис):
+Client Credentials Flow (service-to-service):
   cash     → accounts  (scope: accounts.write)
   transfer → accounts  (scope: accounts.write)
 
-Kafka (без OAuth2):
+Kafka (no OAuth2):
   accounts, cash, transfer → Kafka → notifications
 ```
 
-Каждый бизнес-сервис защищён как **Resource Server** (JWT / jwk-set-uri).  
-Scope-based авторизация: `accounts.read`, `accounts.write`, `cash.write`, `transfer.write`.
+Each business service is protected as a **Resource Server** (JWT / jwk-set-uri).  
+Scope-based authorization: `accounts.read`, `accounts.write`, `cash.write`, `transfer.write`.
 
 ---
 
-## Быстрый старт (Kubernetes)
+## Quick start (Kubernetes)
 
-### Требования
+### Requirements
 
-- Kubernetes кластер (Rancher Desktop / Minikube / Kind / Colima)
+- Kubernetes cluster (Rancher Desktop / Minikube / Kind / Colima)
 - Helm 3+
 - JDK 21
 - Docker
 
-### Сборка и развёртывание
+### Build and deploy
 
 ```bash
-# 1. Собрать все JAR-файлы
+# 1. Build all JAR files
 ./gradlew clean build -x test
 
-# 2. Собрать Docker-образы (для Minikube — использовать docker-env)
-eval $(minikube docker-env)  # только для Minikube
+# 2. Build Docker images (for Minikube — use docker-env)
+eval $(minikube docker-env)  # Minikube only
 
 docker build -t my-bank-accounts:latest ./accounts
 docker build -t my-bank-cash:latest ./cash
@@ -281,17 +280,17 @@ docker build -t my-bank-notifications:latest ./notifications
 docker build -t my-bank-gateway:latest ./gateway
 docker build -t my-bank-front-ui:latest ./front-ui
 
-# 3. Развернуть с помощью Helm
+# 3. Deploy with Helm
 helm install my-bank ./helm/my-bank
 
-# 4. Проверить статус подов
+# 4. Check pod status
 kubectl get pods -w
 
-# 5. Запустить Helm-тесты
+# 5. Run Helm tests
 helm test my-bank
 ```
 
-### Пересборка отдельного сервиса
+### Rebuilding a single service
 
 ```bash
 ./gradlew :<service>:clean :<service>:build -x test
@@ -299,7 +298,7 @@ docker build -t my-bank-<service>:latest ./<service>
 kubectl rollout restart deployment/<service>
 ```
 
-### Удаление
+### Uninstall
 
 ```bash
 helm uninstall my-bank
@@ -307,37 +306,37 @@ helm uninstall my-bank
 
 ---
 
-## Доступные URL (Kubernetes)
+## Available URLs (Kubernetes)
 
-| Сервис        | URL                                 |
-|---------------|-------------------------------------|
-| Веб-интерфейс | http://localhost:30081              |
-| Keycloak      | http://localhost:30180              |
-| Zipkin        | http://localhost:30411              |
-| Prometheus    | http://localhost:30909              |
+| Service       | URL                                  |
+|---------------|--------------------------------------|
+| Web UI        | http://localhost:30081               |
+| Keycloak      | http://localhost:30180               |
+| Zipkin        | http://localhost:30411               |
+| Prometheus    | http://localhost:30909               |
 | Grafana       | http://localhost:30300 (admin/admin) |
-| Kibana        | http://localhost:30561              |
+| Kibana        | http://localhost:30561               |
 
-### Тестовые пользователи (Keycloak realm `my-bank`)
+### Test users (Keycloak realm `my-bank`)
 
-| Пользователь | Пароль   | Роль  |
-|--------------|----------|-------|
-| ivan         | password | USER  |
-| petrov       | password | USER  |
+| User   | Password | Role |
+|--------|----------|------|
+| ivan   | password | USER |
+| petrov | password | USER |
 
 ---
 
-## Helm-чарты
+## Helm charts
 
-### Структура
+### Structure
 
 ```
-helm/my-bank/                    # зонтичный чарт
+helm/my-bank/                    # umbrella chart
 ├── Chart.yaml
 ├── values.yaml
 ├── templates/
-│   ├── secrets.yaml             # общий Secret для всех сервисов
-│   └── tests/                   # Helm-тесты подключения
+│   ├── secrets.yaml             # shared Secret for all services
+│   └── tests/                   # Helm connectivity tests
 │       ├── test-postgres.yaml
 │       ├── test-kafka.yaml
 │       ├── test-keycloak.yaml
@@ -353,7 +352,7 @@ helm/my-bank/                    # зонтичный чарт
 │       ├── test-elasticsearch.yaml
 │       ├── test-logstash.yaml
 │       └── test-kibana.yaml
-└── charts/                      # сабчарты
+└── charts/                      # subcharts
     ├── postgres/                # StatefulSet + Service
     ├── kafka/                   # StatefulSet + Service (KRaft, PVC)
     ├── keycloak/                # Deployment + NodePort Service + ConfigMap (realm)
@@ -371,61 +370,61 @@ helm/my-bank/                    # зонтичный чарт
     └── kibana/                  # Deployment + NodePort Service
 ```
 
-### Helm-тесты
+### Helm tests
 
 ```bash
 helm test my-bank
 ```
 
-Тесты проверяют TCP-доступность каждого сервиса внутри кластера.
+The tests verify TCP reachability of each service inside the cluster.
 
 ---
 
 ## CI/CD (Jenkins)
 
-В корне проекта находится `Jenkinsfile` с декларативным пайплайном:
+The repository root contains a `Jenkinsfile` with a declarative pipeline:
 
-| Stage               | Описание                                                    |
+| Stage               | Description                                                 |
 |---------------------|-------------------------------------------------------------|
-| Checkout            | Клонирование репозитория                                    |
+| Checkout            | Cloning the repository                                      |
 | Build               | `./gradlew clean build -x test`                             |
-| Test                | `./gradlew test` + публикация JUnit-отчётов                |
-| Docker Build & Push | Параллельная сборка и пуш образов для всех 6 сервисов      |
-| Helm Lint           | Проверка Helm-чарта (`helm lint`)                           |
-| Deploy              | `helm upgrade --install` с тегом `BUILD_NUMBER`             |
-| Helm Test           | Запуск Helm-тестов для проверки доступности сервисов        |
+| Test                | `./gradlew test` + publishing JUnit reports                 |
+| Docker Build & Push | Parallel build and push of images for all 6 services        |
+| Helm Lint           | Helm chart validation (`helm lint`)                         |
+| Deploy              | `helm upgrade --install` with the `BUILD_NUMBER` tag        |
+| Helm Test           | Running Helm tests to verify service reachability           |
 
-### Требования к Jenkins-агенту
+### Jenkins agent requirements
 
 - JDK 21
 - Docker
 - Helm 3+
-- kubectl с доступом к целевому кластеру
+- kubectl with access to the target cluster
 
-### Необходимые Credentials в Jenkins
+### Required Jenkins credentials
 
-| ID                          | Тип          | Описание                          |
-|-----------------------------|--------------|-----------------------------------|
-| docker-registry-url         | Secret text  | Адрес Docker-реестра              |
-| docker-registry-credentials | Username/Password | Логин/пароль для Docker-реестра |
+| ID                          | Type              | Description                       |
+|-----------------------------|-------------------|-----------------------------------|
+| docker-registry-url         | Secret text       | Docker registry address           |
+| docker-registry-credentials | Username/Password | Docker registry login/password    |
 
 ---
 
-## Структура проекта
+## Project structure
 
 ```
 my-bank-app/
-├── build.gradle          # корневой — общие зависимости и плагины
+├── build.gradle          # root — common dependencies and plugins
 ├── settings.gradle
-├── helm/                 # Helm-чарты
+├── helm/                 # Helm charts
 ├── gateway/              # API Gateway (WebFlux)
-├── front-ui/             # Веб-интерфейс (MVC + Thymeleaf)
-├── accounts/             # Сервис счетов (JPA + Liquibase + Kafka producer)
-├── cash/                 # Кассовый сервис (Feign + Kafka producer)
-├── transfer/             # Сервис переводов (Feign + Kafka producer)
-├── notifications/        # Сервис уведомлений (Kafka consumer)
-├── keycloak/             # Realm export для автоимпорта
-└── postgres/             # init.sql для инициализации БД
+├── front-ui/             # Web UI (MVC + Thymeleaf)
+├── accounts/             # Accounts service (JPA + Liquibase + Kafka producer)
+├── cash/                 # Cash service (Feign + Kafka producer)
+├── transfer/             # Transfer service (Feign + Kafka producer)
+├── notifications/        # Notifications service (Kafka consumer)
+├── keycloak/             # Realm export for auto-import
+└── postgres/             # init.sql for DB initialization
 ```
 
 ---
@@ -434,59 +433,59 @@ my-bank-app/
 
 ### accounts (8082)
 
-| Метод | URL                          | Scope needed       | Описание                  |
-|-------|------------------------------|--------------------|---------------------------|
-| GET   | /api/accounts/me             | accounts.read      | Мой счёт                  |
-| PUT   | /api/accounts/me             | accounts.write     | Обновить профиль          |
-| GET   | /api/accounts                | accounts.read      | Все счета                 |
-| POST  | /api/accounts/{id}/deposit   | accounts.write     | Пополнить счёт            |
-| POST  | /api/accounts/{id}/withdraw  | accounts.write     | Снять со счёта            |
+| Method | URL                          | Scope needed   | Description       |
+|--------|------------------------------|----------------|-------------------|
+| GET    | /api/accounts/me             | accounts.read  | My account        |
+| PUT    | /api/accounts/me             | accounts.write | Update profile    |
+| GET    | /api/accounts                | accounts.read  | All accounts      |
+| POST   | /api/accounts/{id}/deposit   | accounts.write | Deposit funds     |
+| POST   | /api/accounts/{id}/withdraw  | accounts.write | Withdraw funds    |
 
 ### cash (8083)
 
-| Метод | URL         | Scope needed | Описание           |
-|-------|-------------|--------------|--------------------|
-| POST  | /api/cash/** | cash.write   | Кассовые операции  |
+| Method | URL          | Scope needed | Description     |
+|--------|--------------|--------------|-----------------|
+| POST   | /api/cash/** | cash.write   | Cash operations |
 
 ### transfer (8084)
 
-| Метод | URL              | Scope needed   | Описание       |
-|-------|------------------|----------------|----------------|
-| POST  | /api/transfer/** | transfer.write | Переводы       |
+| Method | URL              | Scope needed   | Description |
+|--------|------------------|----------------|-------------|
+| POST   | /api/transfer/** | transfer.write | Transfers   |
 
 ---
 
-## Тесты
+## Tests
 
 ```bash
-# Все тесты
+# All tests
 ./gradlew test
 
-# Тесты конкретного модуля
+# Tests for a specific module
 ./gradlew :accounts:test
 
-# Helm-тесты
+# Helm tests
 helm test my-bank
 ```
 
-### Unit-тесты
+### Unit tests
 
-- **AccountServiceTest** — CRUD-операции, проверка отправки уведомлений в Kafka
-- **CashServiceTest** — deposit/withdraw с проверкой вызова Kafka producer
-- **TransferServiceTest** — перевод с saga-компенсацией и Kafka producer
-- **AccountControllerTest, CashControllerTest, TransferControllerTest** — JWT-авторизация, валидация
+- **AccountServiceTest** — CRUD operations, verification of notification publishing to Kafka
+- **CashServiceTest** — deposit/withdraw with verification of the Kafka producer call
+- **TransferServiceTest** — transfer with saga compensation and Kafka producer
+- **AccountControllerTest, CashControllerTest, TransferControllerTest** — JWT authorization, validation
 
-### Интеграционные тесты
+### Integration tests
 
-- **AccountServiceIntegrationTest** — Testcontainers (PostgreSQL), полный цикл операций
-- **NotificationKafkaListenerTest** — EmbeddedKafka, проверка получения и обработки сообщений
+- **AccountServiceIntegrationTest** — Testcontainers (PostgreSQL), full operation cycle
+- **NotificationKafkaListenerTest** — EmbeddedKafka, verification of message receipt and processing
 
 ### Testcontainers (Rancher Desktop)
 
-Модуль `accounts` содержит интеграционные тесты с использованием **Testcontainers** (PostgreSQL).
-Для их запуска необходим работающий Docker.
+The `accounts` module contains integration tests that use **Testcontainers** (PostgreSQL).
+A working Docker daemon is required to run them.
 
-**Rancher Desktop:** компонент Ryuk (cleanup-контейнер Testcontainers) может не запускаться из-за конфликта с симлинком Docker-сокета. В `accounts/build.gradle` задаются переменные окружения для обхода этой проблемы:
+**Rancher Desktop:** the Ryuk component (a Testcontainers cleanup container) may fail to start because of a conflict with the Docker socket symlink. In `accounts/build.gradle` environment variables are set to work around this:
 
 ```groovy
 test {
@@ -495,4 +494,4 @@ test {
 }
 ```
 
-При использовании **Docker Desktop** или **Colima** эти настройки можно удалить или заменить `DOCKER_HOST` на актуальный путь к сокету.
+When using **Docker Desktop** or **Colima**, these settings can be removed or `DOCKER_HOST` can be replaced with the actual socket path.
